@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - KFC Delivery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">🍗 KFC Delivery</div>
+        <nav>
+            <a href="index.html">Home</a>
+        </nav>
+    </header>
+
+    <main class="auth-container">
+        <!-- Login Form -->
+        <div class="auth-box" id="login-box">
+            <h2>Welcome Back!</h2>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email Address" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit" class="primary-btn">Login</button>
+            </form>
+            <p>Don't have an account? <a href="#" onclick="toggleAuth()">Register here</a></p>
+        </div>
+
+        <!-- Register Form -->
+        <div class="auth-box" id="register-box" style="display: none;">
+            <h2>Create Account</h2>
+            <form id="register-form">
+                <input type="text" id="reg-fname" placeholder="First Name" required>
+                <input type="text" id="reg-lname" placeholder="Last Name" required>
+                <input type="text" id="reg-phone" placeholder="Phone Number" required>
+                <input type="email" id="reg-email" placeholder="Email Address" required>
+                <input type="password" id="reg-password" placeholder="Password" required>
+                <textarea id="reg-address" placeholder="Delivery Address" required></textarea>
+                <button type="submit" class="primary-btn">Register</button>
+            </form>
+            <p>Already have an account? <a href="#" onclick="toggleAuth()">Login here</a></p>
+        </div>
+    </main>
+
+    <script src="utils.js"></script>
+    <script src="login.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KFC Online Delivery</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">🍗 KFC Delivery</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="#" id="cart-link">Cart (<span id="cart-count">0</span>)</a>
+            <a href="login.html" id="auth-link">Login/Register</a>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="hero">
+            <h2>Finger Lickin' Good</h2>
+            <p>Order your favorite meals now and get them delivered hot and fresh!</p>
+        </section>
+
+        <section class="menu-section">
+            <h2>Available Menu Items</h2>
+            <div id="menu-container" class="menu-grid">
+                <!-- Menu items will be injected here by JavaScript -->
+                <p>Loading menu...</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Your Cart</h2>
+            <div id="cart-items"></div>
+            <div class="payment-method-container" style="margin-top: 1rem; margin-bottom: 0.5rem;">
+                <label for="branch-select"><strong>Nearest Branch:</strong></label>
+                <select id="branch-select" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px;">
+                    <option value="">Loading branches...</option>
+                </select>
+            </div>
+            <div class="payment-method-container" style="margin-bottom: 1rem;">
+                <label for="payment-method"><strong>Payment Method:</strong></label>
+                <select id="payment-method" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px;">
+                    <option value="Cash">Cash on Delivery</option>
+                    <option value="GCash">GCash</option>
+                </select>
+            </div>
+            <div class="cart-total">Total: ₱<span id="cart-total-price">0.00</span></div>
+            <button id="checkout-btn" class="primary-btn">Checkout</button>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

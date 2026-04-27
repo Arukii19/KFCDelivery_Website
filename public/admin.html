@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - KFC Delivery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">🍗 KFC Admin Panel</div>
+        <nav>
+            <a href="index.html">Back to Website</a>
+        </nav>
+    </header>
+
+    <main class="admin-container">
+        
+        <!-- Admin Login Form -->
+        <div class="auth-box" id="admin-login-box">
+            <h2>Admin Login</h2>
+            <form id="admin-login-form">
+                <input type="email" id="admin-email" placeholder="Admin Email" required>
+                <input type="password" id="admin-password" placeholder="Password" required>
+                <button type="submit" class="primary-btn">Login to Dashboard</button>
+            </form>
+        </div>
+
+        <!-- Hidden CRUD Panel -->
+        <div id="admin-crud-panel" style="display: none; width: 100%;">
+            <section class="add-menu-section" style="display: flex; justify-content: center; margin-bottom: 3rem;">
+                <form id="add-menu-form" class="auth-box">
+                    <h2>Add New Menu Item</h2>
+                    <input type="text" id="menu-name" placeholder="Item Name (e.g., Zinger)" required>
+                    <input type="text" id="menu-category" placeholder="Category (e.g., Sandwiches)" required>
+                    <input type="number" id="menu-price" placeholder="Price (₱)" step="0.01" required>
+                    <select id="menu-avail">
+                        <option value="1">Available</option>
+                        <option value="0">Out of Stock</option>
+                    </select>
+                    <button type="submit" class="primary-btn">Add to Database</button>
+                </form>
+            </section>
+
+            <section class="menu-section">
+                <h2 style="text-align: center;">Manage Existing Menu</h2>
+                <div id="admin-menu-container" class="menu-grid">
+                    <!-- Items will be loaded here -->
+                </div>
+            </section>
+
+            <section class="order-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+                <h2 style="text-align: center;">Manage Incoming Orders</h2>
+                <div id="admin-orders-container" class="menu-grid">
+                    <!-- Orders will be loaded here -->
+                </div>
+            </section>
+
+            <section class="active-delivery-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+                <h2 style="text-align: center;">Active Deliveries</h2>
+                <div id="admin-active-container" class="menu-grid">
+                    <!-- Active deliveries will be loaded here -->
+                </div>
+            </section>
+
+            <section class="rider-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+                <h2 style="text-align: center;">Manage Delivery Riders</h2>
+                <div id="admin-riders-container" class="menu-grid">
+                    <!-- Riders will be loaded here -->
+                </div>
+            </section>
+
+            <section class="branch-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+                <h2 style="text-align: center;">Manage Branches</h2>
+                <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+                    <form id="add-branch-form" class="auth-box">
+                        <h2>Add New Branch</h2>
+                        <input type="text" id="branch-name" placeholder="Branch Name (e.g., KFC Ayala)" required>
+                        <input type="text" id="branch-location" placeholder="Location (e.g., Ayala Center, Cebu)" required>
+                        <input type="text" id="branch-contact" placeholder="Contact Number" required>
+                        <button type="submit" class="primary-btn">Add Branch</button>
+                    </form>
+                </div>
+                <div id="admin-branches-container" class="menu-grid">
+                    <!-- Branches will be loaded here -->
+                </div>
+            </section>
+
+            <section class="customer-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+                <h2 style="text-align: center;">Manage Users</h2>
+                <div id="admin-customers-container" class="menu-grid">
+                    <!-- Customers will be loaded here -->
+                </div>
+            </section>
+
+            <section class="history-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+                <h2 style="text-align: center;">📦 Delivered Orders History</h2>
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <select id="history-customer-filter" style="padding: 0.6rem 1rem; border: 1px solid #ccc; border-radius: 6px; min-width: 250px; font-family: inherit;">
+                        <option value="">-- All Customers --</option>
+                    </select>
+                </div>
+                <div id="admin-history-container" class="menu-grid">
+                    <!-- Delivered orders will be loaded here -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Order Details Modal -->
+        <div id="order-details-modal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 550px;">
+                <span class="close-btn" onclick="closeOrderModal()">&times;</span>
+                <h2 id="order-modal-title" style="color: var(--kfc-red); margin-top: 0;">Order #</h2>
+                <div id="order-modal-body">
+                    <!-- Order items will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="utils.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
