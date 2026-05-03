@@ -28,7 +28,8 @@ CREATE TABLE DeliveryRider (
     Ridr_ID INT AUTO_INCREMENT PRIMARY KEY,
     Ridr_FName VARCHAR(50) NOT NULL,
     Ridr_LName VARCHAR(50) NOT NULL,
-    Ridr_Phone VARCHAR(20) NOT NULL,
+    Ridr_Phone VARCHAR(20) UNIQUE NOT NULL,
+    Ridr_Pass VARCHAR(255) NOT NULL,
     Ridr_Vehicle VARCHAR(50) NOT NULL,
     Ridr_Status ENUM('Available', 'Busy', 'Offline') DEFAULT 'Available'
 );
@@ -41,7 +42,7 @@ CREATE TABLE `Order` (
     Ridr_ID INT,
     Ordr_Date DATETIME DEFAULT CURRENT_TIMESTAMP,
     Ordr_Total DECIMAL(10, 2) NOT NULL,
-    Ordr_Status ENUM('Pending', 'Preparing', 'Out for Delivery', 'Delivered', 'Canceled') DEFAULT 'Pending',
+    Ordr_Status ENUM('Pending', 'Preparing', 'Out for Delivery', 'Delivered', 'Canceled') DEFAULT 'Preparing',
     FOREIGN KEY (Cust_ID) REFERENCES Customer(Cust_ID),
     FOREIGN KEY (Brch_ID) REFERENCES Branch(Brch_ID),
     FOREIGN KEY (Ridr_ID) REFERENCES DeliveryRider(Ridr_ID)

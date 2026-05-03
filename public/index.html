@@ -14,6 +14,7 @@
             <a href="index.html">Home</a>
             <a href="#" id="cart-link">Cart (<span id="cart-count">0</span>)</a>
             <a href="login.html" id="auth-link">Login/Register</a>
+            <a href="rider-login.html" style="color: #ccc; font-size: 0.85rem; margin-left: 1rem;">Rider Portal</a>
         </nav>
     </header>
     
@@ -24,7 +25,15 @@
         </section>
 
         <section class="menu-section">
-            <h2>Available Menu Items</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--kfc-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
+                <h2 style="border: none; margin: 0; padding: 0;">Available Menu Items</h2>
+                <input type="text" id="search-input" placeholder="Search menu..." style="padding: 0.6rem; border-radius: 6px; border: 1px solid #ccc; width: 100%; max-width: 300px; font-family: inherit; font-size: 1rem;">
+            </div>
+            
+            <div id="category-filters" style="margin-bottom: 2rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <!-- Category buttons injected by JS -->
+            </div>
+
             <div id="menu-container" class="menu-grid">
                 <!-- Menu items will be injected here by JavaScript -->
                 <p>Loading menu...</p>
@@ -39,14 +48,14 @@
             <h2>Your Cart</h2>
             <div id="cart-items"></div>
             <div class="payment-method-container" style="margin-top: 1rem; margin-bottom: 0.5rem;">
-                <label for="branch-select"><strong>Nearest Branch:</strong></label>
-                <select id="branch-select" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px;">
+                <label for="branch-select"><strong>Select Branch:</strong></label>
+                <select id="branch-select" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem;">
                     <option value="">Loading branches...</option>
                 </select>
             </div>
-            <div class="payment-method-container" style="margin-bottom: 1rem;">
+            <div class="payment-method-container" style="margin-bottom: 0.5rem;">
                 <label for="payment-method"><strong>Payment Method:</strong></label>
-                <select id="payment-method" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px;">
+                <select id="payment-method" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem;">
                     <option value="Cash">Cash on Delivery</option>
                     <option value="GCash">GCash</option>
                 </select>

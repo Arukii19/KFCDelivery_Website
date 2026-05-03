@@ -287,3 +287,25 @@ main {
     text-align: center;
     font-weight: bold;
 }
+
+/* --- Category Filters --- */
+.category-btn {
+    background-color: #f1f1f1;
+    border: none;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.category-btn:hover {
+    background-color: #e2e2e2;
+}
+
+.category-btn.active {
+    background-color: var(--kfc-red);
+    color: white;
+}

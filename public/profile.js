@@ -13,6 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prof-address').value = user.Cust_Addr;
 
     fetchCustomerOrders(user.Cust_ID);
+
+    // Handle tab switching if specified in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'orders') {
+        switchTab('orders');
+    }
 });
 
 document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -116,5 +122,19 @@ async function cancelOrder(orderId) {
     } catch (err) {
         console.error(err);
         if(typeof showNotification === 'function') showNotification('Failed to cancel order.', true);
+    }
+}
+
+function switchTab(tabId) {
+    if (tabId === 'profile') {
+        document.getElementById('profile-box').style.display = 'block';
+        document.getElementById('my-orders-box').style.display = 'none';
+        document.getElementById('tab-profile').classList.add('active');
+        document.getElementById('tab-orders').classList.remove('active');
+    } else {
+        document.getElementById('profile-box').style.display = 'none';
+        document.getElementById('my-orders-box').style.display = 'block';
+        document.getElementById('tab-profile').classList.remove('active');
+        document.getElementById('tab-orders').classList.add('active');
     }
 }

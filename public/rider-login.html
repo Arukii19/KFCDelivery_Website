@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Portal - KFC Delivery</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">🏍️ Driver Portal</div>
+        <nav>
+            <a href="index.html">Back to Website</a>
+        </nav>
+    </header>
+
+    <main class="auth-container" style="display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 140px);">
+        
+        <!-- Driver Login Form -->
+        <div class="auth-box" id="login-box" style="width: 100%; max-width: 400px; text-align: center;">
+            <h2>Driver Login</h2>
+            <form id="rider-login-form">
+                <input type="tel" id="login-phone" placeholder="Phone Number" required style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; box-sizing: border-box;">
+                <input type="password" id="login-password" placeholder="Password" required style="width: 100%; padding: 0.8rem; margin-bottom: 1.5rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; box-sizing: border-box;">
+                <button type="submit" class="primary-btn" style="width: 100%;">Login to Dashboard</button>
+            </form>
+            <p style="margin-top: 1.5rem;">New rider? <a href="#" onclick="toggleAuth()">Apply here</a></p>
+        </div>
+
+        <!-- Driver Register Form -->
+        <div class="auth-box" id="register-box" style="display: none; width: 100%; max-width: 450px; text-align: center;">
+            <h2>Rider Application</h2>
+            <form id="rider-register-form">
+                <input type="text" id="reg-fname" placeholder="First Name" required style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
+                <input type="text" id="reg-lname" placeholder="Last Name" required style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
+                <input type="text" id="reg-phone" placeholder="Phone Number" required style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
+                <select id="reg-vehicle" required style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; color: #555;">
+                    <option value="" disabled selected>-- Select Vehicle Type --</option>
+                    <option value="Motorcycle">Motorcycle</option>
+                    <option value="Bicycle">Bicycle</option>
+                    <option value="E-Bike">E-Bike</option>
+                    <option value="Car">Car</option>
+                    <option value="Van">Van</option>
+                </select>
+                <input type="password" id="reg-password" placeholder="Password" required style="width: 100%; padding: 0.8rem; margin-bottom: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
+                <button type="submit" class="primary-btn" style="width: 100%;">Register as Rider</button>
+            </form>
+            <p style="margin-top: 1.5rem;">Already approved? <a href="#" onclick="toggleAuth()">Login here</a></p>
+        </div>
+
+    </main>
+
+    <script src="utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('riderSession')) {
+                window.location.href = 'rider-dashboard.html';
+            }
+        });
+
+        function toggleAuth() {
+            const loginBox = document.getElementById('login-box');
+            const registerBox = document.getElementById('register-box');
+            
+            if (loginBox.style.display === 'none') {
+                loginBox.style.display = 'block';
+                registerBox.style.display = 'none';
+            } else {
+                loginBox.style.display = 'none';
+                registerBox.style.display = 'block';
+            }
+        }
+
+        // Login Submit
+        document.getElementById('rider-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('login-phone').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('http://localhost:3000/api/rider/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, password })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    if(typeof showNotification === 'function') showNotification('Welcome back, ' + data.rider.Ridr_FName);
+                    localStorage.setItem('riderSession', JSON.stringify(data.rider));
+                    setTimeout(() => window.location.href = 'rider-dashboard.html', 1500);
+                } else {
+                    if(typeof showNotification === 'function') showNotification('Error: ' + data.error, true);
+                }
+            } catch (err) {
+                console.error(err);
+                if(typeof showNotification === 'function') showNotification('Failed to connect to server', true);
+            }
+        });
+
+        // Register Submit
+        document.getElementById('rider-register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                fName: document.getElementById('reg-fname').value,
+                lName: document.getElementById('reg-lname').value,
+                phone: document.getElementById('reg-phone').value,
+                vehicle: document.getElementById('reg-vehicle').value,
+                password: document.getElementById('reg-password').value
+            };
+
+            try {
+                const res = await fetch('http://localhost:3000/api/rider/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    if(typeof showNotification === 'function') showNotification('Registration successful! Please login.');
+                    setTimeout(() => toggleAuth(), 1500);
+                } else {
+                    if(typeof showNotification === 'function') showNotification('Error: ' + data.error, true);
+                }
+            } catch (err) {
+                console.error(err);
+                if(typeof showNotification === 'function') showNotification('Failed to connect to server', true);
+            }
+        });
+    </script>
+</body>
+</html>

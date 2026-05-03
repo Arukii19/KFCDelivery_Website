@@ -2,28 +2,39 @@
 const ADMIN_EMAIL = 'admin@kfc.com';
 const ADMIN_PASS = 'admin123';
 
+document.addEventListener('DOMContentLoaded', () => {
+    if (sessionStorage.getItem('adminAuth') === 'true') {
+        showAdminDashboard();
+    }
+});
+
 document.getElementById('admin-login-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const email = document.getElementById('admin-email').value;
     const password = document.getElementById('admin-password').value;
 
     if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-        // Hide login, show CRUD panel
-        document.getElementById('admin-login-box').style.display = 'none';
-        document.getElementById('admin-crud-panel').style.display = 'block';
-        
-        // Load the menu items
-        fetchAdminMenu();
-        fetchAdminOrders();
-        fetchActiveDeliveries();
-        fetchAdminRiders();
-        fetchAdminCustomers();
-        fetchAdminBranches();
-        fetchDeliveredHistory();
+        sessionStorage.setItem('adminAuth', 'true');
+        showAdminDashboard();
     } else {
         showNotification('Invalid Admin Credentials!', true);
     }
 });
+
+function showAdminDashboard() {
+    // Hide login, show CRUD panel
+    document.getElementById('admin-login-box').style.display = 'none';
+    document.getElementById('admin-crud-panel').style.display = 'block';
+    
+    // Load the menu items
+    fetchAdminMenu();
+    fetchAdminOrders();
+    fetchActiveDeliveries();
+    fetchAdminRiders();
+    fetchAdminCustomers();
+    fetchAdminBranches();
+    fetchDeliveredHistory();
+}
 
 
 // CRUD Feature Logic
@@ -105,13 +116,20 @@ async function fetchAdminOrders() {
     orders.forEach(order => {
         const div = document.createElement('div');
         div.className = 'menu-item';
+        div.style.textAlign = 'left';
+        const date = new Date(order.Ordr_Date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const statusColor = order.Ordr_Status === 'Pending' ? '#dc3545' : '#007bff';
+
         div.innerHTML = `
-            <h3>Order #${order.Ordr_ID}</h3>
-            <p style="margin: 0.25rem 0;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
-            <p style="margin: 0.25rem 0;"><strong>Address:</strong> ${order.Cust_Addr}</p>
-            <p style="margin: 0.25rem 0;"><strong>Branch:</strong> ${order.Brch_Name}</p>
-            <p style="margin: 0.25rem 0;"><strong>Status:</strong> ${order.Ordr_Status}</p>
-            <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: ₱${order.Ordr_Total}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
+                <span style="background: ${statusColor}; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">${order.Ordr_Status}</span>
+            </div>
+            <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">📅 ${date}</p>
+            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
+            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${order.Cust_Addr}</p>
+            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Branch:</strong> ${order.Brch_Name}</p>
+            <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
             <div style="margin-top: 1rem; text-align: left;">
                 ${order.Ordr_Status === 'Pending' ? `
                     <button onclick="markAsPreparing(${order.Ordr_ID})" class="primary-btn" style="padding: 0.5rem; background-color: #ffc107; color: #000;">Mark as Preparing</button>
@@ -252,13 +270,18 @@ async function fetchActiveDeliveries() {
         deliveries.forEach(order => {
             const div = document.createElement('div');
             div.className = 'menu-item';
+            div.style.textAlign = 'left';
+
             div.innerHTML = `
-                <h3>Order #${order.Ordr_ID}</h3>
-                <p style="margin: 0.25rem 0;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
-                <p style="margin: 0.25rem 0;"><strong>Address:</strong> ${order.Cust_Addr}</p>
-                <p style="margin: 0.25rem 0;"><strong>Branch:</strong> ${order.Brch_Name}</p>
-                <p style="margin: 0.25rem 0;"><strong>Rider:</strong> ${order.Ridr_FName} ${order.Ridr_LName}</p>
-                <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: \u20b1${order.Ordr_Total}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
+                    <span style="background: #ffc107; color: #000; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">Out for Delivery</span>
+                </div>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${order.Cust_Addr}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Branch:</strong> ${order.Brch_Name}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Rider:</strong> ${order.Ridr_FName} ${order.Ridr_LName}</p>
+                <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
                 <button onclick="markAsDelivered(${order.Ordr_ID})" class="primary-btn" style="padding: 0.5rem; background-color: #28a745;">Mark as Delivered</button>
             `;
             container.appendChild(div);
@@ -536,16 +559,16 @@ async function fetchDeliveredHistory(custFilterId) {
             div.className = 'menu-item';
             div.style.textAlign = 'left';
             div.innerHTML = `
-                <h3 style="display: flex; justify-content: space-between; align-items: center;">
-                    Order #${order.Ordr_ID}
-                    <span style="background: #28a745; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600;">Delivered</span>
-                </h3>
-                ${custName ? `<p style="margin: 0.25rem 0;"><strong>Customer:</strong> ${custName}</p>` : ''}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
+                    <span style="background: #28a745; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">Delivered</span>
+                </div>
+                ${custName ? `<p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${custName}</p>` : ''}
                 <p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">📅 ${date}</p>
-                <p style="margin: 0.25rem 0;">🏪 Branch: ${order.Brch_Name}</p>
-                <p style="margin: 0.25rem 0;">💳 ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
-                <p style="margin: 0.25rem 0;">🏍️ Rider: ${rider}</p>
-                <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;">🏪 Branch: ${order.Brch_Name}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;">💳 ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;">🏍️ Rider: ${rider}</p>
+                <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
             `;
             container.appendChild(div);
         });

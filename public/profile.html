@@ -16,8 +16,13 @@
     </header>
 
     <main class="auth-container">
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+            <button id="tab-profile" class="category-btn active" onclick="switchTab('profile')">My Profile</button>
+            <button id="tab-orders" class="category-btn" onclick="switchTab('orders')">My Orders</button>
+        </div>
+
         <div class="auth-box" id="profile-box" style="max-width: 500px;">
-            <h2>My Profile</h2>
+            <h2>Profile Details</h2>
             <form id="profile-form">
                 <div style="text-align: left; margin-bottom: 0.5rem;"><label>First Name</label></div>
                 <input type="text" id="prof-fname" placeholder="First Name" required>
@@ -39,9 +44,9 @@
             <button onclick="logoutUser()" class="primary-btn" style="background-color: #333;">Logout</button>
         </div>
 
-        <div class="auth-box" id="my-orders-box" style="max-width: 600px; margin-top: 2rem; margin-bottom: 3rem;">
-            <h2>My Orders</h2>
-            <div id="customer-orders-container" class="menu-grid" style="grid-template-columns: 1fr;">
+        <div class="auth-box" id="my-orders-box" style="max-width: 600px; display: none;">
+            <h2 style="margin-bottom: 1.5rem;">My Orders</h2>
+            <div id="customer-orders-container" class="menu-grid" style="grid-template-columns: 1fr; gap: 1rem;">
                 <!-- Customer orders will be loaded here -->
             </div>
         </div>

@@ -32,7 +32,15 @@
                 <form id="add-menu-form" class="auth-box">
                     <h2>Add New Menu Item</h2>
                     <input type="text" id="menu-name" placeholder="Item Name (e.g., Zinger)" required>
-                    <input type="text" id="menu-category" placeholder="Category (e.g., Sandwiches)" required>
+                    <select id="menu-category" required>
+                        <option value="" disabled selected>-- Select Category --</option>
+                        <option value="Meals">Meals</option>
+                        <option value="Sandwiches">Sandwiches</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="Sides">Sides</option>
+                        <option value="Drinks">Drinks</option>
+                        <option value="Desserts">Desserts</option>
+                    </select>
                     <input type="number" id="menu-price" placeholder="Price (₱)" step="0.01" required>
                     <select id="menu-avail">
                         <option value="1">Available</option>

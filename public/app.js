@@ -20,36 +20,85 @@ function checkAuthStatus() {
     }
 }
 
+let allMenuItems = [];
+let currentCategory = 'All';
+let currentSearchTerm = '';
+
 function fetchMenuItems() {
     // Fetch data from our Node.js backend
     fetch('http://localhost:3000/api/menu')
         .then(response => response.json())
         .then(data => {
-            const menuContainer = document.getElementById('menu-container');
-            menuContainer.innerHTML = ''; // Clear loading text
-
-            if (data.length === 0) {
-                menuContainer.innerHTML = '<p>No items found. Have you inserted data into the MySQL database?</p>';
-                return;
-            }
-
-            // Loop through each menu item and create HTML elements
-            data.forEach(item => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'menu-item';
-                itemDiv.innerHTML = `
-                    <h3>${item.Menu_Name}</h3>
-                    <p class="price">₱${item.Menu_Price}</p>
-                    <button class="add-to-cart-btn">Add to Cart</button>
-                `;
-                itemDiv.querySelector('.add-to-cart-btn').addEventListener('click', () => addToCart(item));
-                menuContainer.appendChild(itemDiv);
-            });
+            allMenuItems = data;
+            setupCategoryFilters();
+            setupSearch();
+            renderMenuItems();
         })
         .catch(error => {
             console.error('Error fetching menu:', error);
             document.getElementById('menu-container').innerHTML = '<p>Error loading menu. Is the Node.js backend server running?</p>';
         });
+}
+
+function setupCategoryFilters() {
+    const filtersContainer = document.getElementById('category-filters');
+    if (!filtersContainer) return;
+    
+    // Get unique categories
+    const categories = ['All', ...new Set(allMenuItems.map(item => item.Menu_Category))];
+    filtersContainer.innerHTML = '';
+    
+    categories.forEach(category => {
+        const btn = document.createElement('button');
+        btn.textContent = category;
+        btn.className = category === 'All' ? 'category-btn active' : 'category-btn';
+        btn.onclick = () => {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentCategory = category;
+            renderMenuItems();
+        };
+        filtersContainer.appendChild(btn);
+    });
+}
+
+function setupSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) return;
+    searchInput.addEventListener('input', (e) => {
+        currentSearchTerm = e.target.value.toLowerCase();
+        renderMenuItems();
+    });
+}
+
+function renderMenuItems() {
+    const menuContainer = document.getElementById('menu-container');
+    if (!menuContainer) return;
+    menuContainer.innerHTML = '';
+
+    const filteredData = allMenuItems.filter(item => {
+        const matchesCategory = currentCategory === 'All' || item.Menu_Category === currentCategory;
+        const matchesSearch = item.Menu_Name.toLowerCase().includes(currentSearchTerm);
+        return matchesCategory && matchesSearch;
+    });
+
+    if (filteredData.length === 0) {
+        menuContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666;">No items found matching your criteria.</p>';
+        return;
+    }
+
+    filteredData.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'menu-item';
+        itemDiv.innerHTML = `
+            <h3>${item.Menu_Name}</h3>
+            <p style="font-size: 0.85rem; color: #666; margin: 0 0 0.5rem 0;">${item.Menu_Category}</p>
+            <p class="price">₱${item.Menu_Price}</p>
+            <button class="add-to-cart-btn">Add to Cart</button>
+        `;
+        itemDiv.querySelector('.add-to-cart-btn').addEventListener('click', () => addToCart(item));
+        menuContainer.appendChild(itemDiv);
+    });
 }
 
 function fetchBranches() {
@@ -179,10 +228,30 @@ function setupCartUI() {
 
                 const data = await res.json();
                 if(res.ok) {
-                    if(typeof showNotification === 'function') showNotification('Order placed successfully!');
                     cart = [];
                     updateCartUI();
                     modal.style.display = 'none';
+
+                    // Show custom Order Confirmation modal
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'modal';
+                    successDiv.style.display = 'flex';
+                    successDiv.style.alignItems = 'center';
+                    successDiv.style.justifyContent = 'center';
+                    successDiv.style.zIndex = '9999';
+                    successDiv.innerHTML = `
+                        <div class="modal-content" style="text-align: center; max-width: 400px; padding: 2.5rem 2rem;">
+                            <h2 style="color: #28a745; margin-bottom: 1rem; font-size: 2rem;">🎉 Order Confirmed!</h2>
+                            <p style="margin-bottom: 0.5rem; font-size: 1.1rem;">Your order <strong>#${data.orderId}</strong> has been placed successfully.</p>
+                            <p style="margin-bottom: 2rem; color: #555; font-size: 0.95rem;">We are now preparing your delicious meal. You can track its status in your profile.</p>
+                            <button id="view-order-btn" class="primary-btn" style="width: 100%;">View Order Status</button>
+                        </div>
+                    `;
+                    document.body.appendChild(successDiv);
+
+                    document.getElementById('view-order-btn').onclick = () => {
+                        window.location.href = 'profile.html?tab=orders';
+                    };
                 } else {
                     if(typeof showNotification === 'function') showNotification('Error: ' + data.error, true);
                 }

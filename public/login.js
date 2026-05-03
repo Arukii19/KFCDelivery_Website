@@ -1,3 +1,9 @@
+document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('user')) {
+        window.location.href = 'profile.html';
+    }
+});
+
 function toggleAuth() {
     const loginBox = document.getElementById('login-box');
     const registerBox = document.getElementById('register-box');

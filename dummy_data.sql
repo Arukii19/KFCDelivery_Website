@@ -28,10 +28,10 @@ INSERT INTO MenuItem (Menu_Name, Menu_Category, Menu_Price, Menu_Avail) VALUES
 ('Out of Stock Item', 'Snacks', 100.00, FALSE);
 
 -- Insert Delivery Riders
-INSERT INTO DeliveryRider (Ridr_FName, Ridr_LName, Ridr_Phone, Ridr_Vehicle, Ridr_Status) VALUES 
-('Juan', 'Dela Cruz', '09111111111', 'Motorcycle', 'Available'),
-('Pedro', 'Penduko', '09222222222', 'Motorcycle', 'Available'),
-('Jose', 'Rizal', '09333333333', 'Car', 'Available'),
-('Andres', 'Bonifacio', '09444444444', 'Motorcycle', 'Available'),
-('Emilio', 'Aguinaldo', '09555555555', 'E-Bike', 'Busy');
+INSERT INTO DeliveryRider (Ridr_FName, Ridr_LName, Ridr_Phone, Ridr_Pass, Ridr_Vehicle, Ridr_Status) VALUES 
+('Juan', 'Dela Cruz', '09111111111', 'cmlkZXIxMjM=', 'Motorcycle', 'Available'),
+('Pedro', 'Penduko', '09222222222', 'cmlkZXIxMjM=', 'Motorcycle', 'Available'),
+('Jose', 'Rizal', '09333333333', 'cmlkZXIxMjM=', 'Car', 'Available'),
+('Andres', 'Bonifacio', '09444444444', 'cmlkZXIxMjM=', 'Motorcycle', 'Available'),
+('Emilio', 'Aguinaldo', '09555555555', 'cmlkZXIxMjM=', 'E-Bike', 'Busy');
 

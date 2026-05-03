@@ -130,7 +130,7 @@ app.post('/api/orders', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
 
         const orderQuery = 'INSERT INTO `Order` (Cust_ID, Brch_ID, Ordr_Total, Ordr_Status) VALUES (?, ?, ?, ?)';
-        db.query(orderQuery, [customerId, selectedBranch, total, 'Pending'], (err, orderResult) => {
+        db.query(orderQuery, [customerId, selectedBranch, total, 'Preparing'], (err, orderResult) => {
             if (err) {
                 return db.rollback(() => { res.status(500).json({ error: err.message }); });
             }
@@ -441,6 +441,93 @@ app.delete('/api/admin/branches/:id', (req, res) => {
     db.query(query, [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: 'Branch deleted!' });
+    });
+});
+
+// ==========================================
+// RIDER DASHBOARD ROUTES
+// ==========================================
+
+// Rider Registration
+app.post('/api/rider/register', (req, res) => {
+    const { fName, lName, phone, password, vehicle } = req.body;
+    
+    // Check if phone already exists
+    const checkQuery = 'SELECT * FROM DeliveryRider WHERE Ridr_Phone = ?';
+    db.query(checkQuery, [phone], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length > 0) return res.status(400).json({ error: 'Phone number already registered' });
+
+        // Encrypt the password using Base64
+        const hashedPassword = Buffer.from(password).toString('base64');
+
+        const insertQuery = 'INSERT INTO DeliveryRider (Ridr_FName, Ridr_LName, Ridr_Phone, Ridr_Pass, Ridr_Vehicle) VALUES (?, ?, ?, ?, ?)';
+        db.query(insertQuery, [fName, lName, phone, hashedPassword, vehicle], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Rider registered successfully', riderId: result.insertId });
+        });
+    });
+});
+
+// Rider Login
+app.post('/api/rider/login', (req, res) => {
+    const { phone, password } = req.body;
+    
+    const query = 'SELECT * FROM DeliveryRider WHERE Ridr_Phone = ?';
+    db.query(query, [phone], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length > 0) {
+            const rider = results[0];
+            // Compare Base64 exactly
+            const isMatch = (Buffer.from(password).toString('base64') === rider.Ridr_Pass);
+
+            if (isMatch) {
+                // Don't send password back to client
+                delete rider.Ridr_Pass;
+                res.json({ message: 'Login successful', rider });
+            } else {
+                res.status(401).json({ error: 'Invalid phone number or password' });
+            }
+        } else {
+            res.status(401).json({ error: 'Invalid phone number or password' });
+        }
+    });
+});
+
+// Get active deliveries assigned to a specific rider
+app.get('/api/rider/:id/deliveries', (req, res) => {
+    const { id } = req.params;
+    const query = `
+        SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Status, 
+               c.Cust_FName, c.Cust_LName, c.Cust_Phone, c.Cust_Addr, 
+               b.Brch_Name, p.Pay_Method, p.Pay_Status
+        FROM \`Order\` o
+        JOIN Customer c ON o.Cust_ID = c.Cust_ID
+        JOIN Branch b ON o.Brch_ID = b.Brch_ID
+        LEFT JOIN Payment p ON o.Ordr_ID = p.Ordr_ID
+        WHERE o.Ridr_ID = ? AND o.Ordr_Status = 'Out for Delivery'
+        ORDER BY o.Ordr_Date DESC
+    `;
+    db.query(query, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// Get delivery history for a specific rider
+app.get('/api/rider/:id/history', (req, res) => {
+    const { id } = req.params;
+    const query = `
+        SELECT o.Ordr_ID, o.Ordr_Date, o.Ordr_Total, o.Ordr_Status, 
+               c.Cust_FName, c.Cust_LName, c.Cust_Addr
+        FROM \`Order\` o
+        JOIN Customer c ON o.Cust_ID = c.Cust_ID
+        WHERE o.Ridr_ID = ? AND o.Ordr_Status = 'Delivered'
+        ORDER BY o.Ordr_Date DESC
+    `;
+    db.query(query, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
     });
 });
 
