@@ -256,13 +256,27 @@ app.get('/api/admin/active-deliveries', (req, res) => {
     });
 });
 
-// Mark order as delivered
+// Mark order as delivered and update payment status
 app.put('/api/admin/orders/:id/deliver', (req, res) => {
     const { id } = req.params;
-    const query = 'UPDATE \`Order\` SET Ordr_Status = "Delivered" WHERE Ordr_ID = ?';
-    db.query(query, [id], (err, results) => {
+    
+    db.beginTransaction((err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Order marked as Delivered!' });
+
+        const orderQuery = 'UPDATE \`Order\` SET Ordr_Status = "Delivered" WHERE Ordr_ID = ?';
+        db.query(orderQuery, [id], (err, results) => {
+            if (err) return db.rollback(() => { res.status(500).json({ error: err.message }); });
+
+            const paymentQuery = 'UPDATE Payment SET Pay_Status = "Completed" WHERE Ordr_ID = ?';
+            db.query(paymentQuery, [id], (err, paymentResults) => {
+                if (err) return db.rollback(() => { res.status(500).json({ error: err.message }); });
+
+                db.commit((err) => {
+                    if (err) return db.rollback(() => { res.status(500).json({ error: err.message }); });
+                    res.json({ message: 'Order marked as Delivered and Payment Completed!' });
+                });
+            });
+        });
     });
 });
 
