@@ -183,6 +183,14 @@ function setupCartUI() {
         btn.onclick = (e) => {
             e.preventDefault();
             modal.style.display = 'flex';
+            const userStr = localStorage.getItem('user');
+            if(userStr) {
+                const user = JSON.parse(userStr);
+                const addressInput = document.getElementById('checkout-address');
+                if(addressInput && user.Cust_Addr && user.Cust_Addr !== 'Pending') {
+                    addressInput.value = user.Cust_Addr;
+                }
+            }
         };
     }
     if(closeBtn && modal) {
@@ -212,6 +220,13 @@ function setupCartUI() {
             const total = cart.reduce((sum, item) => sum + (item.Menu_Price * item.quantity), 0);
             const paymentMethod = document.getElementById('payment-method') ? document.getElementById('payment-method').value : 'Cash';
             const branchId = document.getElementById('branch-select') ? document.getElementById('branch-select').value : 1;
+            const addressInput = document.getElementById('checkout-address');
+            const deliveryAddress = addressInput ? addressInput.value.trim() : '';
+
+            if(!deliveryAddress) {
+                if(typeof showNotification === 'function') showNotification('Please enter a delivery address!', true);
+                return;
+            }
 
             try {
                 const res = await fetch('http://localhost:3000/api/orders', {
@@ -222,12 +237,16 @@ function setupCartUI() {
                         cartItems: cart,
                         total: total,
                         paymentMethod: paymentMethod,
-                        branchId: parseInt(branchId)
+                        branchId: parseInt(branchId),
+                        deliveryAddress: deliveryAddress
                     })
                 });
 
                 const data = await res.json();
                 if(res.ok) {
+                    if (data.updatedUser) {
+                        localStorage.setItem('user', JSON.stringify(data.updatedUser));
+                    }
                     cart = [];
                     updateCartUI();
                     modal.style.display = 'none';

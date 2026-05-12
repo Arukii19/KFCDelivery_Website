@@ -53,13 +53,16 @@ app.get('/api/branches', (req, res) => {
 
 // Registration API
 app.post('/api/register', (req, res) => {
-    const { fName, lName, phone, email, password, address } = req.body;
-    
+    const { fName, lName, phone, email, password } = req.body;
+
     // Encrypt the password using Base64 so it looks short and neat in the database
     const hashedPassword = Buffer.from(password).toString('base64');
 
+    // Default to 'Pending' since address is entered at checkout
+    const address = 'Pending';
+
     const query = 'INSERT INTO Customer (Cust_FName, Cust_LName, Cust_Phone, Cust_Email, Cust_Pass, Cust_Addr) VALUES (?, ?, ?, ?, ?, ?)';
-    
+
     db.query(query, [fName, lName, phone, email, hashedPassword, address], (err, results) => {
         if (err) {
             if (err.code === 'ER_DUP_ENTRY') {
@@ -75,7 +78,7 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     const query = 'SELECT * FROM Customer WHERE Cust_Email = ?';
-    
+
     db.query(query, [email], (err, results) => {
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -87,7 +90,7 @@ app.post('/api/login', (req, res) => {
 
             if (isMatch) {
                 // Send back user data (excluding password for safety)
-                delete user.Cust_Pass; 
+                delete user.Cust_Pass;
                 res.json({ message: 'Login successful!', user: user });
             } else {
                 res.status(401).json({ error: 'Invalid email or password' });
@@ -122,46 +125,61 @@ app.delete('/api/menu/:id', (req, res) => {
 
 // --- ORDER CHECKOUT ---
 app.post('/api/orders', (req, res) => {
-    const { customerId, cartItems, total, paymentMethod, branchId } = req.body;
+    const { customerId, cartItems, total, paymentMethod, branchId, deliveryAddress } = req.body;
     // Use selected branch, default to 1 if not provided
-    const selectedBranch = branchId || 1; 
+    const selectedBranch = branchId || 1;
 
     db.beginTransaction((err) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        const orderQuery = 'INSERT INTO `Order` (Cust_ID, Brch_ID, Ordr_Total, Ordr_Status) VALUES (?, ?, ?, ?)';
-        db.query(orderQuery, [customerId, selectedBranch, total, 'Preparing'], (err, orderResult) => {
-            if (err) {
-                return db.rollback(() => { res.status(500).json({ error: err.message }); });
-            }
+        // First, update the customer's delivery address
+        const updateCustomerQuery = 'UPDATE Customer SET Cust_Addr = ? WHERE Cust_ID = ?';
+        db.query(updateCustomerQuery, [deliveryAddress, customerId], (err, customerResult) => {
+            if (err) return db.rollback(() => { res.status(500).json({ error: err.message }); });
 
-            const orderId = orderResult.insertId;
-            const orderItemsData = cartItems.map(item => [orderId, item.Menu_ID, item.quantity, item.Menu_Price * item.quantity]);
-            
-            if (orderItemsData.length === 0) {
-                 return db.rollback(() => { res.status(400).json({ error: "Cart is empty" }); });
-            }
-
-            const orderItemQuery = 'INSERT INTO OrderItem (Ordr_ID, Menu_ID, Oite_Qty, Oite_Subtotal) VALUES ?';
-            db.query(orderItemQuery, [orderItemsData], (err, orderItemResult) => {
+            const orderQuery = 'INSERT INTO `Order` (Cust_ID, Brch_ID, Ordr_Total, Ordr_Status, Delivery_Addr) VALUES (?, ?, ?, ?, ?)';
+            db.query(orderQuery, [customerId, selectedBranch, total, 'Preparing', deliveryAddress], (err, orderResult) => {
                 if (err) {
                     return db.rollback(() => { res.status(500).json({ error: err.message }); });
                 }
 
-                const paymentQuery = 'INSERT INTO Payment (Ordr_ID, Pay_Method, Pay_Status) VALUES (?, ?, ?)';
-                // If paid via GCash, assume completed (for simulation), else Pending for COD
-                const payStatus = paymentMethod === 'GCash' ? 'Completed' : 'Pending';
-                
-                db.query(paymentQuery, [orderId, paymentMethod, payStatus], (err, paymentResult) => {
+                const orderId = orderResult.insertId;
+                const orderItemsData = cartItems.map(item => [orderId, item.Menu_ID, item.quantity, item.Menu_Price * item.quantity]);
+
+                if (orderItemsData.length === 0) {
+                    return db.rollback(() => { res.status(400).json({ error: "Cart is empty" }); });
+                }
+
+                const orderItemQuery = 'INSERT INTO OrderItem (Ordr_ID, Menu_ID, Oite_Qty, Oite_Subtotal) VALUES ?';
+                db.query(orderItemQuery, [orderItemsData], (err, orderItemResult) => {
                     if (err) {
                         return db.rollback(() => { res.status(500).json({ error: err.message }); });
                     }
 
-                    db.commit((err) => {
+                    const paymentQuery = 'INSERT INTO Payment (Ordr_ID, Pay_Method, Pay_Status) VALUES (?, ?, ?)';
+                    // If paid via GCash, assume completed (for simulation), else Pending for COD
+                    const payStatus = paymentMethod === 'GCash' ? 'Completed' : 'Pending';
+
+                    db.query(paymentQuery, [orderId, paymentMethod, payStatus], (err, paymentResult) => {
                         if (err) {
                             return db.rollback(() => { res.status(500).json({ error: err.message }); });
                         }
-                        res.json({ message: 'Order placed successfully!', orderId: orderId });
+
+                        db.commit((err) => {
+                            if (err) {
+                                return db.rollback(() => { res.status(500).json({ error: err.message }); });
+                            }
+
+                            // Fetch the updated user to send back
+                            db.query('SELECT * FROM Customer WHERE Cust_ID = ?', [customerId], (err, userResults) => {
+                                let updatedUser = null;
+                                if (!err && userResults.length > 0) {
+                                    updatedUser = userResults[0];
+                                    delete updatedUser.Cust_Pass;
+                                }
+                                res.json({ message: 'Order placed successfully!', orderId: orderId, updatedUser: updatedUser });
+                            });
+                        });
                     });
                 });
             });
@@ -185,7 +203,7 @@ app.put('/api/orders/:id/cancel', (req, res) => {
 // Get pending orders
 app.get('/api/admin/orders', (req, res) => {
     const query = `
-        SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Date, o.Ordr_Status, c.Cust_FName, c.Cust_LName, c.Cust_Addr, b.Brch_Name 
+        SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Date, o.Ordr_Status, c.Cust_FName, c.Cust_LName, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr, b.Brch_Name 
         FROM \`Order\` o
         JOIN Customer c ON o.Cust_ID = c.Cust_ID
         JOIN Branch b ON o.Brch_ID = b.Brch_ID
@@ -210,12 +228,12 @@ app.get('/api/admin/riders', (req, res) => {
 app.put('/api/admin/orders/:id/assign', (req, res) => {
     const { id } = req.params;
     const { riderId } = req.body;
-    
+
     // First, check how many active orders this rider has
     const countQuery = 'SELECT COUNT(*) as activeCount FROM `Order` WHERE Ridr_ID = ? AND Ordr_Status = "Out for Delivery"';
     db.query(countQuery, [riderId], (err, countResults) => {
         if (err) return res.status(500).json({ error: err.message });
-        
+
         if (countResults[0].activeCount >= 1) {
             return res.status(400).json({ error: 'Rider is at maximum capacity (1 order at a time)!' });
         }
@@ -243,7 +261,7 @@ app.put('/api/admin/orders/:id/assign', (req, res) => {
 // Get active deliveries
 app.get('/api/admin/active-deliveries', (req, res) => {
     const query = `
-        SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Status, c.Cust_FName, c.Cust_LName, c.Cust_Addr, r.Ridr_FName, r.Ridr_LName, b.Brch_Name 
+        SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Status, c.Cust_FName, c.Cust_LName, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr, r.Ridr_FName, r.Ridr_LName, b.Brch_Name 
         FROM \`Order\` o
         JOIN Customer c ON o.Cust_ID = c.Cust_ID
         JOIN DeliveryRider r ON o.Ridr_ID = r.Ridr_ID
@@ -259,7 +277,7 @@ app.get('/api/admin/active-deliveries', (req, res) => {
 // Mark order as delivered and update payment status
 app.put('/api/admin/orders/:id/deliver', (req, res) => {
     const { id } = req.params;
-    
+
     db.beginTransaction((err) => {
         if (err) return res.status(500).json({ error: err.message });
 
@@ -318,7 +336,7 @@ app.put('/api/customer/:id', (req, res) => {
     const query = 'UPDATE Customer SET Cust_FName = ?, Cust_LName = ?, Cust_Phone = ?, Cust_Email = ?, Cust_Addr = ? WHERE Cust_ID = ?';
     db.query(query, [fName, lName, phone, email, address, id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        
+
         // Return the updated data so the frontend can update localStorage
         const fetchQuery = 'SELECT * FROM Customer WHERE Cust_ID = ?';
         db.query(fetchQuery, [id], (err, fetchResults) => {
@@ -385,8 +403,9 @@ app.get('/api/admin/customers/:id/orders', (req, res) => {
         SELECT o.Ordr_ID, o.Ordr_Date, o.Ordr_Total, o.Ordr_Status,
                p.Pay_Method, p.Pay_Status,
                r.Ridr_FName, r.Ridr_LName,
-               b.Brch_Name
+               b.Brch_Name, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr
         FROM \`Order\` o
+        JOIN Customer c ON o.Cust_ID = c.Cust_ID
         LEFT JOIN Payment p ON o.Ordr_ID = p.Ordr_ID
         LEFT JOIN DeliveryRider r ON o.Ridr_ID = r.Ridr_ID
         JOIN Branch b ON o.Brch_ID = b.Brch_ID
@@ -418,7 +437,7 @@ app.get('/api/admin/orders/:id/items', (req, res) => {
 app.get('/api/admin/delivered-history', (req, res) => {
     const query = `
         SELECT o.Ordr_ID, o.Ordr_Date, o.Ordr_Total, o.Ordr_Status,
-               c.Cust_FName, c.Cust_LName, c.Cust_Addr,
+               c.Cust_FName, c.Cust_LName, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr,
                p.Pay_Method, p.Pay_Status,
                r.Ridr_FName, r.Ridr_LName,
                b.Brch_Name
@@ -465,7 +484,7 @@ app.delete('/api/admin/branches/:id', (req, res) => {
 // Rider Registration
 app.post('/api/rider/register', (req, res) => {
     const { fName, lName, phone, password, vehicle } = req.body;
-    
+
     // Check if phone already exists
     const checkQuery = 'SELECT * FROM DeliveryRider WHERE Ridr_Phone = ?';
     db.query(checkQuery, [phone], (err, results) => {
@@ -486,7 +505,7 @@ app.post('/api/rider/register', (req, res) => {
 // Rider Login
 app.post('/api/rider/login', (req, res) => {
     const { phone, password } = req.body;
-    
+
     const query = 'SELECT * FROM DeliveryRider WHERE Ridr_Phone = ?';
     db.query(query, [phone], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -513,7 +532,7 @@ app.get('/api/rider/:id/deliveries', (req, res) => {
     const { id } = req.params;
     const query = `
         SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Status, 
-               c.Cust_FName, c.Cust_LName, c.Cust_Phone, c.Cust_Addr, 
+               c.Cust_FName, c.Cust_LName, c.Cust_Phone, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr, 
                b.Brch_Name, p.Pay_Method, p.Pay_Status
         FROM \`Order\` o
         JOIN Customer c ON o.Cust_ID = c.Cust_ID
@@ -533,7 +552,7 @@ app.get('/api/rider/:id/history', (req, res) => {
     const { id } = req.params;
     const query = `
         SELECT o.Ordr_ID, o.Ordr_Date, o.Ordr_Total, o.Ordr_Status, 
-               c.Cust_FName, c.Cust_LName, c.Cust_Addr
+               c.Cust_FName, c.Cust_LName, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr
         FROM \`Order\` o
         JOIN Customer c ON o.Cust_ID = c.Cust_ID
         WHERE o.Ridr_ID = ? AND o.Ordr_Status = 'Delivered'

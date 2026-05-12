@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prof-lname').value = user.Cust_LName;
     document.getElementById('prof-phone').value = user.Cust_Phone;
     document.getElementById('prof-email').value = user.Cust_Email;
-    document.getElementById('prof-address').value = user.Cust_Addr;
 
     fetchCustomerOrders(user.Cust_ID);
 
@@ -32,7 +31,7 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
     const lName = document.getElementById('prof-lname').value;
     const phone = document.getElementById('prof-phone').value;
     const email = document.getElementById('prof-email').value;
-    const address = document.getElementById('prof-address').value;
+    const address = user.Cust_Addr; // Keep the existing address
 
     try {
         const res = await fetch(`http://localhost:3000/api/customer/${user.Cust_ID}`, {
@@ -90,6 +89,7 @@ async function fetchCustomerOrders(customerId) {
                 </div>
                 <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">📅 ${date}</p>
                 <p style="margin: 0.25rem 0; font-size: 0.9rem;">🏪 Branch: ${order.Brch_Name || 'N/A'}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;">📍 Delivered to: ${order.Cust_Addr || 'N/A'}</p>
                 <p style="margin: 0.25rem 0; font-size: 0.9rem;">💳 ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
                 <p style="margin: 0.5rem 0 0.5rem; font-weight: 800; color: var(--kfc-red); font-size: 1.1rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
                 

@@ -48,12 +48,11 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     const phone = document.getElementById('reg-phone').value;
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
-    const address = document.getElementById('reg-address').value;
 
     const res = await fetch('http://localhost:3000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fName, lName, phone, email, password, address })
+        body: JSON.stringify({ fName, lName, phone, email, password })
     });
 
     const data = await res.json();

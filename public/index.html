@@ -9,12 +9,12 @@
 </head>
 <body>
     <header>
-        <div class="logo">🍗 KFC Delivery</div>
+        <div class="logo">KFC Delivery</div>
         <nav>
             <a href="index.html">Home</a>
             <a href="#" id="cart-link">Cart (<span id="cart-count">0</span>)</a>
             <a href="login.html" id="auth-link">Login/Register</a>
-            <a href="rider-login.html" style="color: #ccc; font-size: 0.85rem; margin-left: 1rem;">Rider Portal</a>
+            <a href="rider-login.html">Rider Portal</a>
         </nav>
     </header>
     
@@ -52,6 +52,10 @@
                 <select id="branch-select" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem;">
                     <option value="">Loading branches...</option>
                 </select>
+            </div>
+            <div class="payment-method-container" style="margin-bottom: 0.5rem;">
+                <label for="checkout-address"><strong>Delivery Address:</strong></label>
+                <textarea id="checkout-address" placeholder="Enter full delivery address" required style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem; font-family: inherit; border: 1px solid #ccc;"></textarea>
             </div>
             <div class="payment-method-container" style="margin-bottom: 0.5rem;">
                 <label for="payment-method"><strong>Payment Method:</strong></label>
