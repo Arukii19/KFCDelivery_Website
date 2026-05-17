@@ -1,4 +1,5 @@
 let cart = [];
+let selectedBranchId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchMenuItems();
@@ -25,11 +26,15 @@ let currentCategory = 'All';
 let currentSearchTerm = '';
 
 function fetchMenuItems() {
+    if (!selectedBranchId) {
+        document.getElementById('menu-container').innerHTML = '<p style="grid-column: 1 / -1; text-align: center; font-size: 1.2rem; color: #666;">Please select a branch above to view the available menu.</p>';
+        return;
+    }
     // Fetch data from our Node.js backend
-    fetch('http://localhost:3000/api/menu')
+    fetch(`http://localhost:3000/api/menu?branchId=${selectedBranchId}`)
         .then(response => response.json())
         .then(data => {
-            allMenuItems = data;
+            allMenuItems = data.filter(item => item.Menu_Avail === 1);
             setupCategoryFilters();
             setupSearch();
             renderMenuItems();
@@ -71,6 +76,15 @@ function setupSearch() {
     });
 }
 
+const CATEGORY_IMAGES = {
+    'Meals':       'images/cat-meals.png',
+    'Sandwiches':  'images/cat-sandwiches.png',
+    'Buckets':     'images/cat-buckets.png',
+    'Snacks':      'images/cat-snacks.png',
+    'Sides':       'images/cat-sides.png',
+    'Drinks':      'images/cat-drinks.png',
+};
+
 function renderMenuItems() {
     const menuContainer = document.getElementById('menu-container');
     if (!menuContainer) return;
@@ -83,18 +97,32 @@ function renderMenuItems() {
     });
 
     if (filteredData.length === 0) {
-        menuContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666;">No items found matching your criteria.</p>';
+        menuContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: var(--gray-400); padding: 3rem 0;">No items found matching your search.</p>';
         return;
     }
 
     filteredData.forEach(item => {
+        let imgSrc = 'images/cat-meals.png'; // default fallback
+        if (item.Menu_Image) {
+            imgSrc = 'images/uploads/' + item.Menu_Image;
+        } else if (CATEGORY_IMAGES[item.Menu_Category]) {
+            imgSrc = CATEGORY_IMAGES[item.Menu_Category];
+        }
+        
         const itemDiv = document.createElement('div');
         itemDiv.className = 'menu-item';
         itemDiv.innerHTML = `
-            <h3>${item.Menu_Name}</h3>
-            <p style="font-size: 0.85rem; color: #666; margin: 0 0 0.5rem 0;">${item.Menu_Category}</p>
-            <p class="price">₱${item.Menu_Price}</p>
-            <button class="add-to-cart-btn">Add to Cart</button>
+            <div class="menu-item-img-wrapper">
+                <img class="menu-item-img" src="${imgSrc}" alt="${item.Menu_Name}" loading="lazy">
+            </div>
+            <div class="menu-item-body">
+                <span class="menu-item-badge">${item.Menu_Category}</span>
+                <h3>${item.Menu_Name}</h3>
+                <div class="menu-item-footer">
+                    <span class="price">₱${parseFloat(item.Menu_Price).toFixed(2)}</span>
+                    <button class="add-to-cart-btn" title="Add to Cart">+</button>
+                </div>
+            </div>
         `;
         itemDiv.querySelector('.add-to-cart-btn').addEventListener('click', () => addToCart(item));
         menuContainer.appendChild(itemDiv);
@@ -105,15 +133,26 @@ function fetchBranches() {
     fetch('http://localhost:3000/api/branches')
         .then(response => response.json())
         .then(branches => {
-            const select = document.getElementById('branch-select');
-            if (!select) return;
-            select.innerHTML = '';
+            const mainSelect = document.getElementById('main-branch-select');
+            
+            if (mainSelect) mainSelect.innerHTML = '<option value="" disabled selected>-- Select a Branch --</option>';
+
             branches.forEach(branch => {
-                const opt = document.createElement('option');
-                opt.value = branch.Brch_ID;
-                opt.textContent = `${branch.Brch_Name} — ${branch.Brch_Loc}`;
-                select.appendChild(opt);
+                const text = `${branch.Brch_Name} — ${branch.Brch_Loc}`;
+                if (mainSelect) {
+                    const opt = document.createElement('option');
+                    opt.value = branch.Brch_ID;
+                    opt.textContent = text;
+                    mainSelect.appendChild(opt);
+                }
             });
+
+            if (mainSelect) {
+                mainSelect.addEventListener('change', (e) => {
+                    selectedBranchId = e.target.value;
+                    fetchMenuItems();
+                });
+            }
         })
         .catch(err => console.error('Error loading branches:', err));
 }
@@ -146,13 +185,13 @@ function updateCartUI() {
         const div = document.createElement('div');
         div.className = 'cart-item';
         div.innerHTML = `
-            <span style="flex:1;">${item.Menu_Name}</span>
+            <div class="cart-item-name">${item.Menu_Name}</div>
             <div class="cart-qty-controls">
                 <button onclick="changeQuantity(${index}, -1)" class="qty-btn">-</button>
                 <span class="qty-display">${item.quantity}</span>
                 <button onclick="changeQuantity(${index}, 1)" class="qty-btn">+</button>
             </div>
-            <span style="width: 80px; text-align: right;">₱${(item.Menu_Price * item.quantity).toFixed(2)}</span>
+            <span style="width: 70px; text-align: right; font-weight: 700; font-size: 0.9rem;">₱${(item.Menu_Price * item.quantity).toFixed(2)}</span>
             <button onclick="removeFromCart(${index})" class="remove-btn">&times;</button>
         `;
         cartItems.appendChild(div);
@@ -219,7 +258,7 @@ function setupCartUI() {
             const user = JSON.parse(userStr);
             const total = cart.reduce((sum, item) => sum + (item.Menu_Price * item.quantity), 0);
             const paymentMethod = document.getElementById('payment-method') ? document.getElementById('payment-method').value : 'Cash';
-            const branchId = document.getElementById('branch-select') ? document.getElementById('branch-select').value : 1;
+            const branchId = selectedBranchId;
             const addressInput = document.getElementById('checkout-address');
             const deliveryAddress = addressInput ? addressInput.value.trim() : '';
 
@@ -260,16 +299,20 @@ function setupCartUI() {
                     successDiv.style.zIndex = '9999';
                     successDiv.innerHTML = `
                         <div class="modal-content" style="text-align: center; max-width: 400px; padding: 2.5rem 2rem;">
-                            <h2 style="color: #28a745; margin-bottom: 1rem; font-size: 2rem;">🎉 Order Confirmed!</h2>
+                            <h2 style="color: #28a745; margin-bottom: 1rem; font-size: 2rem;">Order Confirmed!</h2>
                             <p style="margin-bottom: 0.5rem; font-size: 1.1rem;">Your order <strong>#${data.orderId}</strong> has been placed successfully.</p>
                             <p style="margin-bottom: 2rem; color: #555; font-size: 0.95rem;">We are now preparing your delicious meal. You can track its status in your profile.</p>
-                            <button id="view-order-btn" class="primary-btn" style="width: 100%;">View Order Status</button>
+                            <button id="view-order-btn" class="primary-btn" style="width: 100%; margin-bottom: 0.5rem;">View Order Status</button>
+                            <button id="continue-shopping-btn" style="width: 100%; padding: 0.8rem; background: #f0f0f0; color: #333; border: 1px solid #ccc; border-radius: 6px; font-weight: bold; cursor: pointer;">Stay on Dashboard</button>
                         </div>
                     `;
                     document.body.appendChild(successDiv);
 
                     document.getElementById('view-order-btn').onclick = () => {
                         window.location.href = 'profile.html?tab=orders';
+                    };
+                    document.getElementById('continue-shopping-btn').onclick = () => {
+                        document.body.removeChild(successDiv);
                     };
                 } else {
                     if(typeof showNotification === 'function') showNotification('Error: ' + data.error, true);

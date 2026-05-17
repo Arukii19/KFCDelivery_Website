@@ -1,32 +1,34 @@
-// Admin Login Logic (Hardcoded for simplicity since no Admin table exists in DB)
-const ADMIN_EMAIL = 'admin@kfc.com';
-const ADMIN_PASS = 'admin123';
-
 document.addEventListener('DOMContentLoaded', () => {
-    if (sessionStorage.getItem('adminAuth') === 'true') {
-        showAdminDashboard();
+    const role = localStorage.getItem('staffRole');
+    if (role !== 'SuperAdmin' && role !== 'BranchAdmin') {
+        window.location.href = 'staff-login.html';
+        return;
     }
+    
+    // Hide specific sections if only a BranchAdmin
+    if (role === 'BranchAdmin') {
+        document.querySelector('.add-menu-section').style.display = 'none';
+        document.querySelector('.rider-section').style.display = 'none';
+        document.querySelector('.branch-section').style.display = 'none';
+        document.querySelector('.customer-section').style.display = 'none';
+        const menuTitle = document.querySelector('.menu-section h2');
+        if (menuTitle) menuTitle.textContent = 'Branch Inventory Management';
+    }
+
+    const branchName = localStorage.getItem('staffBranchName') || 'Global Head Office';
+    const header = document.getElementById('branch-display-header');
+    if (header) header.textContent = `Managing: ${branchName}`;
+
+    showAdminDashboard();
 });
 
-document.getElementById('admin-login-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('admin-email').value;
-    const password = document.getElementById('admin-password').value;
-
-    if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-        sessionStorage.setItem('adminAuth', 'true');
-        showAdminDashboard();
-    } else {
-        showNotification('Invalid Admin Credentials!', true);
-    }
-});
+function logoutAdmin(e) {
+    if(e) e.preventDefault();
+    localStorage.clear();
+    window.location.href = 'staff-login.html';
+}
 
 function showAdminDashboard() {
-    // Hide login, show CRUD panel
-    document.getElementById('admin-login-box').style.display = 'none';
-    document.getElementById('admin-crud-panel').style.display = 'block';
-    
-    // Load the menu items
     fetchAdminMenu();
     fetchAdminOrders();
     fetchActiveDeliveries();
@@ -39,7 +41,11 @@ function showAdminDashboard() {
 
 // CRUD Feature Logic
 async function fetchAdminMenu() {
-    const res = await fetch('http://localhost:3000/api/menu');
+    const role = localStorage.getItem('staffRole');
+    const branchId = localStorage.getItem('staffBranch');
+    const url = role === 'BranchAdmin' ? `http://localhost:3000/api/menu?branchId=${branchId}` : 'http://localhost:3000/api/menu';
+    
+    const res = await fetch(url);
     const data = await res.json();
     const container = document.getElementById('admin-menu-container');
     container.innerHTML = '';
@@ -47,14 +53,50 @@ async function fetchAdminMenu() {
     data.forEach(item => {
         const div = document.createElement('div');
         div.className = 'menu-item';
+        
+        let actionHtml = '';
+        if (role === 'SuperAdmin') {
+            actionHtml = `
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button class="primary-btn" onclick="openEditPriceModal(${item.Menu_ID}, ${item.Menu_Price})" style="flex: 1; padding: 0.6rem 0.5rem; font-size: 0.85rem;">Edit Price</button>
+                    <button class="primary-btn" onclick="deleteMenu(${item.Menu_ID})" style="flex: 1; background-color: var(--gray-800); padding: 0.6rem 0.5rem; font-size: 0.85rem;">Delete</button>
+                </div>
+            `;
+        } else {
+            const isAvail = item.Menu_Avail === 1;
+            const btnColor = isAvail ? 'var(--gray-800)' : '#10b981'; // dark gray for 'mark out of stock', green for 'mark in stock'
+            actionHtml = `<button class="primary-btn" onclick="toggleBranchMenu(${branchId}, ${item.Menu_ID}, ${!isAvail})" style="background-color: ${btnColor}; margin-top: 0.5rem; padding: 0.6rem 1rem; width: 100%; font-size: 0.9rem;">${isAvail ? 'Mark Out of Stock' : 'Mark In Stock'}</button>`;
+        }
+
         div.innerHTML = `
-            <h3>${item.Menu_Name}</h3>
-            <p>${item.Menu_Category}</p>
-            <p class="price">₱${item.Menu_Price}</p>
-            <button onclick="deleteMenu(${item.Menu_ID})" style="background-color: #333;">Delete Item</button>
+            <div class="menu-item-body">
+                <span class="menu-item-badge">${item.Menu_Category}</span>
+                <h3>${item.Menu_Name}</h3>
+                <div class="menu-item-footer">
+                    <span class="price">₱${parseFloat(item.Menu_Price).toFixed(2)}</span>
+                </div>
+                <div style="margin-top: 1rem;">
+                    ${actionHtml}
+                </div>
+            </div>
         `;
         container.appendChild(div);
     });
+}
+
+async function toggleBranchMenu(branchId, menuId, newStatus) {
+    const res = await fetch(`http://localhost:3000/api/admin/branch-menu/${branchId}/${menuId}/toggle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isAvailable: newStatus })
+    });
+
+    if (res.ok) {
+        showNotification('Branch inventory updated!');
+        fetchAdminMenu();
+    } else {
+        showNotification('Error updating inventory', true);
+    }
 }
 
 document.getElementById('add-menu-form').addEventListener('submit', async (e) => {
@@ -63,11 +105,20 @@ document.getElementById('add-menu-form').addEventListener('submit', async (e) =>
     const category = document.getElementById('menu-category').value;
     const price = document.getElementById('menu-price').value;
     const avail = document.getElementById('menu-avail').value === '1';
+    const imageFile = document.getElementById('menu-image').files[0];
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('category', category);
+    formData.append('price', price);
+    formData.append('avail', avail);
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
 
     const res = await fetch('http://localhost:3000/api/menu', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, category, price, avail })
+        body: formData // No Content-Type header needed for FormData
     });
 
     if (res.ok) {
@@ -94,6 +145,40 @@ async function deleteMenu(id) {
     }
 }
 
+function openEditPriceModal(id, currentPrice) {
+    document.getElementById('edit-price-id').value = id;
+    document.getElementById('edit-price-input').value = currentPrice;
+    document.getElementById('edit-price-modal').style.display = 'flex';
+}
+
+function closeEditPriceModal() {
+    document.getElementById('edit-price-modal').style.display = 'none';
+}
+
+async function saveNewPrice() {
+    const id = document.getElementById('edit-price-id').value;
+    const newPrice = document.getElementById('edit-price-input').value;
+
+    if (!newPrice || newPrice <= 0) {
+        showNotification('Please enter a valid price.', true);
+        return;
+    }
+
+    const res = await fetch(`http://localhost:3000/api/menu/${id}/price`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: parseFloat(newPrice) })
+    });
+
+    if (res.ok) {
+        showNotification('Price updated successfully!');
+        closeEditPriceModal();
+        fetchAdminMenu();
+    } else {
+        showNotification('Error updating price.', true);
+    }
+}
+
 // Order Management Logic
 let availableRiders = [];
 
@@ -101,7 +186,11 @@ async function fetchAdminOrders() {
     const ridersRes = await fetch('http://localhost:3000/api/admin/riders');
     availableRiders = await ridersRes.json();
 
-    const res = await fetch('http://localhost:3000/api/admin/orders');
+    const branchId = localStorage.getItem('staffBranch');
+    const url = (localStorage.getItem('staffRole') === 'BranchAdmin') 
+                ? `http://localhost:3000/api/admin/orders?branchId=${branchId}` 
+                : 'http://localhost:3000/api/admin/orders';
+    const res = await fetch(url);
     const orders = await res.json();
     const container = document.getElementById('admin-orders-container');
     container.innerHTML = '';
@@ -120,27 +209,42 @@ async function fetchAdminOrders() {
         const date = new Date(order.Ordr_Date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         const statusColor = order.Ordr_Status === 'Pending' ? '#dc3545' : '#007bff';
 
+        const role = localStorage.getItem('staffRole');
+        let actionControls = '';
+        
+        if (role === 'SuperAdmin') {
+            actionControls = `<div style="margin-top: auto; padding-top: 1rem;"><p style="font-weight: 600; color: var(--gray-500); font-size: 0.9rem; text-align: center; background: var(--gray-50); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px dashed var(--gray-200); margin: 0;">Branch staff will process this order.</p></div>`;
+        } else {
+            actionControls = `
+                <div style="margin-top: auto; text-align: left; padding-top: 1rem;">
+                    ${order.Ordr_Status === 'Pending' ? `
+                        <button onclick="markAsPreparing(${order.Ordr_ID})" class="primary-btn" style="background-color: #f59e0b; color: #fff;">Accept (To Kitchen)</button>
+                    ` : order.Ordr_Status === 'Preparing' ? `
+                        <p style="font-weight: 600; color: #f59e0b; font-size: 0.95rem; text-align: center; background: #fef3c7; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px dashed #fcd34d; margin: 0;">Cooking in Kitchen...</p>
+                    ` : `
+                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--gray-600); display: block; margin-bottom: 0.4rem;">Assign Rider:</label>
+                        <select id="rider-select-${order.Ordr_ID}" style="width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); font-family: inherit;">
+                            <option value="">-- Select Rider --</option>
+                            ${riderOptions}
+                        </select>
+                        <button onclick="assignRider(${order.Ordr_ID})" class="primary-btn">Dispatch Rider</button>
+                    `}
+                </div>
+            `;
+        }
+
         div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
-                <span style="background: ${statusColor}; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">${order.Ordr_Status}</span>
-            </div>
-            <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">📅 ${date}</p>
-            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
-            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${order.Cust_Addr}</p>
-            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Branch:</strong> ${order.Brch_Name}</p>
-            <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
-            <div style="margin-top: 1rem; text-align: left;">
-                ${order.Ordr_Status === 'Pending' ? `
-                    <button onclick="markAsPreparing(${order.Ordr_ID})" class="primary-btn" style="padding: 0.5rem; background-color: #ffc107; color: #000;">Mark as Preparing</button>
-                ` : `
-                    <label style="font-weight: bold; font-size: 0.9rem;">Assign Rider:</label>
-                    <select id="rider-select-${order.Ordr_ID}" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 4px;">
-                        <option value="">-- Select Rider --</option>
-                        ${riderOptions}
-                    </select>
-                    <button onclick="assignRider(${order.Ordr_ID})" class="primary-btn" style="padding: 0.5rem;">Dispatch Rider</button>
-                `}
+            <div class="menu-item-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Order #${order.Ordr_ID}</h3>
+                    <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 700;">${order.Ordr_Status}</span>
+                </div>
+                <p style="margin: 0.25rem 0; font-size: 0.85rem; color: var(--gray-600);">Date: ${date}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${order.Cust_Addr}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Branch:</strong> ${order.Brch_Name}</p>
+                <p class="price" style="margin: 1rem 0 0.5rem; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
+                ${actionControls}
             </div>
         `;
         container.appendChild(div);
@@ -213,17 +317,21 @@ async function fetchAdminRiders() {
             const div = document.createElement('div');
             div.className = 'menu-item';
             div.innerHTML = `
-                <h3>${rider.Ridr_FName} ${rider.Ridr_LName}</h3>
-                <p><strong>Phone:</strong> ${rider.Ridr_Phone}</p>
-                <p><strong>Vehicle:</strong> ${rider.Ridr_Vehicle}</p>
-                <div style="margin-top: 1rem;">
-                    <label style="font-weight: bold; font-size: 0.9rem;">Status:</label>
-                    <select id="rider-status-${rider.Ridr_ID}" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 4px;">
-                        <option value="Available" ${rider.Ridr_Status === 'Available' ? 'selected' : ''}>Available</option>
-                        <option value="Busy" ${rider.Ridr_Status === 'Busy' ? 'selected' : ''}>Busy</option>
-                        <option value="Offline" ${rider.Ridr_Status === 'Offline' ? 'selected' : ''}>Offline</option>
-                    </select>
-                    <button onclick="updateRiderStatus(${rider.Ridr_ID})" class="primary-btn" style="padding: 0.5rem;">Update Status</button>
+                <div class="menu-item-body" style="justify-content: space-between; height: 100%;">
+                    <div>
+                        <h3 style="margin-bottom: 0.5rem;">${rider.Ridr_FName} ${rider.Ridr_LName}</h3>
+                        <p style="margin: 0.2rem 0; color: var(--gray-600); font-size: 0.9rem;"><strong>Phone:</strong> ${rider.Ridr_Phone}</p>
+                        <p style="margin: 0.2rem 0; color: var(--gray-600); font-size: 0.9rem;"><strong>Vehicle:</strong> ${rider.Ridr_Vehicle}</p>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <label style="font-weight: bold; font-size: 0.85rem; color: var(--dark);">Status:</label>
+                        <select id="rider-status-${rider.Ridr_ID}" style="width: 100%; padding: 0.6rem; margin: 0.4rem 0 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-family: 'Inter', sans-serif;">
+                            <option value="Available" ${rider.Ridr_Status === 'Available' ? 'selected' : ''}>Available</option>
+                            <option value="Busy" ${rider.Ridr_Status === 'Busy' ? 'selected' : ''}>Busy</option>
+                            <option value="Offline" ${rider.Ridr_Status === 'Offline' ? 'selected' : ''}>Offline</option>
+                        </select>
+                        <button onclick="updateRiderStatus(${rider.Ridr_ID})" class="primary-btn" style="padding: 0.6rem;">Update Status</button>
+                    </div>
                 </div>
             `;
             container.appendChild(div);
@@ -257,7 +365,11 @@ async function updateRiderStatus(riderId) {
 // Active Deliveries Logic
 async function fetchActiveDeliveries() {
     try {
-        const res = await fetch('http://localhost:3000/api/admin/active-deliveries');
+        const branchId = localStorage.getItem('staffBranch');
+        const url = (localStorage.getItem('staffRole') === 'BranchAdmin') 
+                    ? `http://localhost:3000/api/admin/active-deliveries?branchId=${branchId}` 
+                    : 'http://localhost:3000/api/admin/active-deliveries';
+        const res = await fetch(url);
         const deliveries = await res.json();
         const container = document.getElementById('admin-active-container');
         container.innerHTML = '';
@@ -338,12 +450,14 @@ async function fetchAdminCustomers() {
             const div = document.createElement('div');
             div.className = 'menu-item';
             div.innerHTML = `
-                <h3>${cust.Cust_FName} ${cust.Cust_LName}</h3>
-                <p style="margin: 0.25rem 0;"><strong>Email:</strong> ${cust.Cust_Email}</p>
-                <p style="margin: 0.25rem 0;"><strong>Phone:</strong> ${cust.Cust_Phone}</p>
-                <p style="margin: 0.25rem 0;"><strong>Address:</strong> ${cust.Cust_Addr}</p>
+            <div class="menu-item-body">
+                <h3 style="margin-bottom: 0.5rem;">${cust.Cust_FName} ${cust.Cust_LName}</h3>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Email:</strong> ${cust.Cust_Email}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Phone:</strong> ${cust.Cust_Phone}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${cust.Cust_Addr}</p>
                 <button onclick="viewCustomerOrders(${cust.Cust_ID}, '${cust.Cust_FName} ${cust.Cust_LName}')" class="primary-btn" style="padding: 0.5rem; background-color: #007bff; margin-top: 0.5rem;">📋 View Orders</button>
                 <button onclick="deleteCustomer(${cust.Cust_ID})" class="primary-btn" style="padding: 0.5rem; background-color: #333; margin-top: 0.5rem;">Remove User</button>
+            </div>
             `;
             container.appendChild(div);
         });
@@ -398,10 +512,10 @@ async function viewCustomerOrders(custId, custName) {
                             <strong style="font-size: 1.05rem;">Order #${order.Ordr_ID}</strong>
                             <span style="background: ${statusColor}; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">${order.Ordr_Status}</span>
                         </div>
-                        <p style="margin: 0.2rem 0; font-size: 0.9rem; color: #666;">📅 ${date}</p>
-                        <p style="margin: 0.2rem 0; font-size: 0.9rem;">🏪 Branch: ${order.Brch_Name}</p>
-                        <p style="margin: 0.2rem 0; font-size: 0.9rem;">💳 ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
-                        <p style="margin: 0.2rem 0; font-size: 0.9rem;">🏍️ Rider: ${rider}</p>
+                        <p style="margin: 0.2rem 0; font-size: 0.9rem; color: #666;">Date: ${date}</p>
+                        <p style="margin: 0.2rem 0; font-size: 0.9rem;">Branch: ${order.Brch_Name}</p>
+                        <p style="margin: 0.2rem 0; font-size: 0.9rem;">Payment: ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
+                        <p style="margin: 0.2rem 0; font-size: 0.9rem;">Rider: ${rider}</p>
                         <p style="margin: 0.5rem 0 0.25rem; font-weight: 800; color: var(--kfc-red); font-size: 1.1rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
                         <button onclick="viewOrderItems(${order.Ordr_ID})" style="background: none; border: 1px solid var(--kfc-red); color: var(--kfc-red); padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-top: 0.25rem; transition: all 0.2s;">View Items</button>
                         <div id="order-items-${order.Ordr_ID}" style="display: none; margin-top: 0.5rem;"></div>
@@ -472,10 +586,12 @@ async function fetchAdminBranches() {
             const div = document.createElement('div');
             div.className = 'menu-item';
             div.innerHTML = `
-                <h3>${branch.Brch_Name}</h3>
-                <p><strong>Location:</strong> ${branch.Brch_Loc}</p>
-                <p><strong>Contact:</strong> ${branch.Brch_Contact}</p>
-                <button onclick="deleteBranch(${branch.Brch_ID})" class="primary-btn" style="padding: 0.5rem; background-color: #333; margin-top: 1rem;">Delete Branch</button>
+            <div class="menu-item-body">
+                <h3 style="margin-bottom: 0.5rem;">${branch.Brch_Name}</h3>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Location:</strong> ${branch.Brch_Loc}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Contact:</strong> ${branch.Brch_Contact}</p>
+            </div>
+            <button onclick="deleteBranch(${branch.Brch_ID})" class="primary-btn" style="padding: 0.5rem; background-color: #333; margin-top: 1rem;">Delete Branch</button>
             `;
             container.appendChild(div);
         });
@@ -552,23 +668,24 @@ async function fetchDeliveredHistory(custFilterId) {
 
         delivered.forEach(order => {
             const date = new Date(order.Ordr_Date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const rider = order.Ridr_FName ? `${order.Ridr_FName} ${order.Ridr_LName}` : 'N/A';
-            const custName = order.Cust_FName ? `${order.Cust_FName} ${order.Cust_LName}` : '';
-
+            
             const div = document.createElement('div');
             div.className = 'menu-item';
             div.style.textAlign = 'left';
             div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
-                    <span style="background: #28a745; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">Delivered</span>
+            <div class="menu-item-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Order #${order.Ordr_ID}</h3>
+                    <span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Delivered</span>
                 </div>
-                ${custName ? `<p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${custName}</p>` : ''}
-                <p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">📅 ${date}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;">🏪 Branch: ${order.Brch_Name}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;">💳 ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;">🏍️ Rider: ${rider}</p>
-                <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.85rem; color: #666;">Date: ${date}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Branch:</strong> ${order.Brch_Name}</p>
+                <p class="price" style="margin: 1rem 0 0.5rem; font-size: 1.25rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
+                <div style="margin-top: auto; padding-top: 1rem;">
+                    <button onclick="viewOrderItems(${order.Ordr_ID})" class="primary-btn" style="background-color: #333;">View Items</button>
+                </div>
+            </div>
             `;
             container.appendChild(div);
         });

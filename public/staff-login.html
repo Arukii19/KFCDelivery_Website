@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login — KFC Delivery</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    </head>
+<body>
+    <header>
+        <div class="logo">KFC Delivery</div>
+        <nav>
+            <a href="index.html">Back to Menu</a>
+        </nav>
+    </header>
+
+    <main class="auth-container">
+        <div class="auth-box">
+            <span class="auth-logo">Staff Portal</span>
+            <h2>Staff Sign In</h2>
+            <p class="auth-subtitle">Internal system access for KFC employees.</p>
+            <form id="staffLoginForm">
+                <input type="text" id="phone" placeholder="Staff phone number" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit" class="primary-btn">Sign In</button>
+                <p id="errorMsg" style="color: var(--kfc-red); font-size: 0.875rem; margin-top: 0.75rem; display: none;"></p>
+            </form>
+            <p><a href="rider-login.html">Rider login instead?</a></p>
+        </div>
+    </main>
+
+    <script src="staff-login.js"></script>
+</body>
+</html>

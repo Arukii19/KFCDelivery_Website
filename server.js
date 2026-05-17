@@ -2,6 +2,8 @@ const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const port = 3000;
@@ -10,6 +12,21 @@ const port = 3000;
 app.use(cors());
 app.use(express.json()); // to parse JSON bodies
 app.use(express.static(path.join(__dirname, 'public'))); // serve static files from public folder
+
+// Configure Multer for image uploads
+const uploadDir = path.join(__dirname, 'public', 'images', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
 
 // Database connection setup
 // Make sure XAMPP is running before starting this server
@@ -28,16 +45,27 @@ db.connect((err) => {
     console.log('Successfully connected to the MySQL database!');
 });
 
-// Example API Route to get all available menu items
+// Get all menu items
 app.get('/api/menu', (req, res) => {
-    const query = 'SELECT * FROM MenuItem WHERE Menu_Avail = TRUE';
-    db.query(query, (err, results) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        res.json(results);
-    });
+    const { branchId } = req.query;
+    if (branchId && branchId !== 'null' && branchId !== 'undefined') {
+        const query = `
+            SELECT m.*, bm.IsAvailable AS Menu_Avail 
+            FROM MenuItem m
+            JOIN BranchMenu bm ON m.Menu_ID = bm.Menu_ID
+            WHERE bm.Brch_ID = ?
+        `;
+        db.query(query, [branchId], (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(results);
+        });
+    } else {
+        const query = 'SELECT m.*, 1 AS Menu_Avail FROM MenuItem m';
+        db.query(query, (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(results);
+        });
+    }
 });
 
 // Get all branches (for customer dropdown)
@@ -103,13 +131,33 @@ app.post('/api/login', (req, res) => {
 
 // --- MENU CRUD OPERATIONS (ADMIN) ---
 
-// Add a new menu item
-app.post('/api/menu', (req, res) => {
-    const { name, category, price, avail } = req.body;
-    const query = 'INSERT INTO MenuItem (Menu_Name, Menu_Category, Menu_Price, Menu_Avail) VALUES (?, ?, ?, ?)';
-    db.query(query, [name, category, price, avail], (err, results) => {
+// Add new menu item
+app.post('/api/menu', upload.single('image'), (req, res) => {
+    const { name, category, price } = req.body;
+    const imageName = req.file ? req.file.filename : null;
+    
+    const query = 'INSERT INTO MenuItem (Menu_Name, Menu_Category, Menu_Price, Menu_Image) VALUES (?, ?, ?, ?)';
+    db.query(query, [name, category, price, imageName], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Menu item added!', id: results.insertId });
+        const newMenuId = results.insertId;
+        // Automatically add this new item to all branches in BranchMenu
+        const branchMenuQuery = 'INSERT INTO BranchMenu (Brch_ID, Menu_ID, IsAvailable) SELECT Brch_ID, ?, TRUE FROM Branch';
+        db.query(branchMenuQuery, [newMenuId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ message: 'Menu item added!' });
+        });
+    });
+});
+
+// Toggle branch-specific menu item availability
+app.put('/api/admin/branch-menu/:branchId/:menuId/toggle', (req, res) => {
+    const { branchId, menuId } = req.params;
+    const { isAvailable } = req.body;
+    
+    const query = 'UPDATE BranchMenu SET IsAvailable = ? WHERE Brch_ID = ? AND Menu_ID = ?';
+    db.query(query, [isAvailable, branchId, menuId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Branch availability updated!' });
     });
 });
 
@@ -120,6 +168,17 @@ app.delete('/api/menu/:id', (req, res) => {
     db.query(query, [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: 'Menu item deleted!' });
+    });
+});
+
+// Update a menu item price
+app.put('/api/menu/:id/price', (req, res) => {
+    const { id } = req.params;
+    const { price } = req.body;
+    const query = 'UPDATE MenuItem SET Menu_Price = ? WHERE Menu_ID = ?';
+    db.query(query, [price, id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Menu item price updated!' });
     });
 });
 
@@ -138,7 +197,7 @@ app.post('/api/orders', (req, res) => {
             if (err) return db.rollback(() => { res.status(500).json({ error: err.message }); });
 
             const orderQuery = 'INSERT INTO `Order` (Cust_ID, Brch_ID, Ordr_Total, Ordr_Status, Delivery_Addr) VALUES (?, ?, ?, ?, ?)';
-            db.query(orderQuery, [customerId, selectedBranch, total, 'Preparing', deliveryAddress], (err, orderResult) => {
+            db.query(orderQuery, [customerId, selectedBranch, total, 'Pending', deliveryAddress], (err, orderResult) => {
                 if (err) {
                     return db.rollback(() => { res.status(500).json({ error: err.message }); });
                 }
@@ -202,14 +261,20 @@ app.put('/api/orders/:id/cancel', (req, res) => {
 
 // Get pending orders
 app.get('/api/admin/orders', (req, res) => {
-    const query = `
+    const branchId = req.query.branchId;
+    let query = `
         SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Date, o.Ordr_Status, c.Cust_FName, c.Cust_LName, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr, b.Brch_Name 
         FROM \`Order\` o
         JOIN Customer c ON o.Cust_ID = c.Cust_ID
         JOIN Branch b ON o.Brch_ID = b.Brch_ID
-        WHERE o.Ordr_Status IN ('Pending', 'Preparing')
+        WHERE o.Ordr_Status IN ('Pending', 'Preparing', 'Ready for Pickup')
     `;
-    db.query(query, (err, results) => {
+    const params = [];
+    if (branchId && branchId !== 'null' && branchId !== 'undefined') {
+        query += ' AND o.Brch_ID = ?';
+        params.push(branchId);
+    }
+    db.query(query, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
@@ -260,7 +325,8 @@ app.put('/api/admin/orders/:id/assign', (req, res) => {
 
 // Get active deliveries
 app.get('/api/admin/active-deliveries', (req, res) => {
-    const query = `
+    const branchId = req.query.branchId;
+    let query = `
         SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Status, c.Cust_FName, c.Cust_LName, IFNULL(o.Delivery_Addr, c.Cust_Addr) AS Cust_Addr, r.Ridr_FName, r.Ridr_LName, b.Brch_Name 
         FROM \`Order\` o
         JOIN Customer c ON o.Cust_ID = c.Cust_ID
@@ -268,7 +334,12 @@ app.get('/api/admin/active-deliveries', (req, res) => {
         JOIN Branch b ON o.Brch_ID = b.Brch_ID
         WHERE o.Ordr_Status = 'Out for Delivery'
     `;
-    db.query(query, (err, results) => {
+    const params = [];
+    if (branchId && branchId !== 'null' && branchId !== 'undefined') {
+        query += ' AND o.Brch_ID = ?';
+        params.push(branchId);
+    }
+    db.query(query, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
@@ -483,19 +554,19 @@ app.delete('/api/admin/branches/:id', (req, res) => {
 
 // Rider Registration
 app.post('/api/rider/register', (req, res) => {
-    const { fName, lName, phone, password, vehicle } = req.body;
+    const { fName, lName, email, phone, password, vehicle } = req.body;
 
-    // Check if phone already exists
-    const checkQuery = 'SELECT * FROM DeliveryRider WHERE Ridr_Phone = ?';
-    db.query(checkQuery, [phone], (err, results) => {
+    // Check if email already exists
+    const checkQuery = 'SELECT * FROM DeliveryRider WHERE Ridr_Email = ?';
+    db.query(checkQuery, [email], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (results.length > 0) return res.status(400).json({ error: 'Phone number already registered' });
+        if (results.length > 0) return res.status(400).json({ error: 'Email already registered' });
 
         // Encrypt the password using Base64
         const hashedPassword = Buffer.from(password).toString('base64');
 
-        const insertQuery = 'INSERT INTO DeliveryRider (Ridr_FName, Ridr_LName, Ridr_Phone, Ridr_Pass, Ridr_Vehicle) VALUES (?, ?, ?, ?, ?)';
-        db.query(insertQuery, [fName, lName, phone, hashedPassword, vehicle], (err, result) => {
+        const insertQuery = 'INSERT INTO DeliveryRider (Ridr_FName, Ridr_LName, Ridr_Email, Ridr_Phone, Ridr_Pass, Ridr_Vehicle) VALUES (?, ?, ?, ?, ?, ?)';
+        db.query(insertQuery, [fName, lName, email, phone, hashedPassword, vehicle], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Rider registered successfully', riderId: result.insertId });
         });
@@ -504,10 +575,10 @@ app.post('/api/rider/register', (req, res) => {
 
 // Rider Login
 app.post('/api/rider/login', (req, res) => {
-    const { phone, password } = req.body;
+    const { email, password } = req.body;
 
-    const query = 'SELECT * FROM DeliveryRider WHERE Ridr_Phone = ?';
-    db.query(query, [phone], (err, results) => {
+    const query = 'SELECT * FROM DeliveryRider WHERE Ridr_Email = ?';
+    db.query(query, [email], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results.length > 0) {
             const rider = results[0];
@@ -561,6 +632,108 @@ app.get('/api/rider/:id/history', (req, res) => {
     db.query(query, [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
+    });
+});
+
+// ==========================================
+// STAFF DASHBOARD ROUTES
+// ==========================================
+
+// Staff Login
+app.post('/api/staff/login', (req, res) => {
+    const { phone, password } = req.body;
+    const query = `
+        SELECT e.*, b.Brch_Name 
+        FROM Employee e
+        LEFT JOIN Branch b ON e.Brch_ID = b.Brch_ID
+        WHERE e.Emp_Phone = ? AND e.Role IN ('Staff', 'BranchAdmin', 'SuperAdmin')
+    `;
+    
+    db.query(query, [phone], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length > 0) {
+            const employee = results[0];
+            const isMatch = (Buffer.from(password).toString('base64') === employee.Emp_Pass);
+            if (isMatch) {
+                delete employee.Emp_Pass;
+                res.json({ message: 'Login successful', employee });
+            } else {
+                res.status(401).json({ error: 'Invalid phone or password' });
+            }
+        } else {
+            res.status(401).json({ error: 'Invalid phone or password' });
+        }
+    });
+});
+
+// Get Staff Orders (Preparing, Ready for Pickup)
+app.get('/api/staff/orders/:branchId', (req, res) => {
+    const { branchId } = req.params;
+    const query = `
+        SELECT o.Ordr_ID, o.Ordr_Total, o.Ordr_Status, o.Ordr_Date,
+               c.Cust_FName, c.Cust_LName,
+               b.Brch_Name
+        FROM \`Order\` o
+        JOIN Customer c ON o.Cust_ID = c.Cust_ID
+        JOIN Branch b ON o.Brch_ID = b.Brch_ID
+        WHERE o.Brch_ID = ? AND o.Ordr_Status IN ('Preparing', 'Ready for Pickup')
+        ORDER BY o.Ordr_Date ASC
+    `;
+    db.query(query, [branchId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        // Fetch OrderItems for UI
+        const orderIds = results.map(o => o.Ordr_ID);
+        if (orderIds.length === 0) return res.json([]);
+        
+        const itemsQuery = `
+            SELECT oi.Ordr_ID, oi.Oite_Qty, m.Menu_Name
+            FROM OrderItem oi
+            JOIN MenuItem m ON oi.Menu_ID = m.Menu_ID
+            WHERE oi.Ordr_ID IN (?)
+        `;
+        db.query(itemsQuery, [orderIds], (err, itemsResults) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            // Attach items to orders
+            results.forEach(order => {
+                order.items = itemsResults.filter(item => item.Ordr_ID === order.Ordr_ID);
+            });
+            res.json(results);
+        });
+    });
+});
+
+// Staff accepts order
+app.put('/api/staff/orders/:id/accept', (req, res) => {
+    const { id } = req.params;
+    const query = 'UPDATE \`Order\` SET Ordr_Status = "Preparing" WHERE Ordr_ID = ? AND Ordr_Status = "Pending"';
+    db.query(query, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.affectedRows === 0) return res.status(400).json({ error: 'Order cannot be accepted' });
+        res.json({ message: 'Order Accepted and Preparing!' });
+    });
+});
+
+// Staff marks order ready
+app.put('/api/staff/orders/:id/ready', (req, res) => {
+    const { id } = req.params;
+    const query = 'UPDATE \`Order\` SET Ordr_Status = "Ready for Pickup" WHERE Ordr_ID = ? AND Ordr_Status = "Preparing"';
+    db.query(query, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.affectedRows === 0) return res.status(400).json({ error: 'Order cannot be marked ready' });
+        res.json({ message: 'Order is Ready for Pickup!' });
+    });
+});
+
+// Toggle global menu availability
+app.put('/api/staff/menu/:id/toggle', (req, res) => {
+    const { id } = req.params;
+    const { avail } = req.body;
+    const query = 'UPDATE MenuItem SET Menu_Avail = ? WHERE Menu_ID = ?';
+    db.query(query, [avail, id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Menu availability updated!' });
     });
 });
 

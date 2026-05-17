@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const rider = JSON.parse(sessionStr);
-    document.getElementById('rider-greeting').textContent = `🏍️ ${rider.Ridr_FName} ${rider.Ridr_LName}`;
-    document.getElementById('my-status').value = rider.Ridr_Status;
+    document.getElementById('rider-greeting').textContent = `${rider.Ridr_FName} ${rider.Ridr_LName}`;
+    updateStatusUI(rider.Ridr_Status);
 
     fetchRiderDeliveries(rider.Ridr_ID);
     fetchRiderHistory(rider.Ridr_ID);
@@ -18,9 +18,71 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000);
 });
 
+function updateStatusUI(status) {
+    // Reset all buttons
+    ['Available', 'Busy', 'Offline'].forEach(s => {
+        const btn = document.getElementById(`status-${s}`);
+        if(btn) {
+            btn.style.borderColor = '#ccc';
+            btn.style.backgroundColor = 'white';
+        }
+    });
+    
+    // Highlight active button
+    const activeBtn = document.getElementById(`status-${status}`);
+    if(activeBtn) {
+        if(status === 'Available') { activeBtn.style.borderColor = '#10b981'; activeBtn.style.backgroundColor = '#ecfdf5'; }
+        if(status === 'Busy') { activeBtn.style.borderColor = '#f59e0b'; activeBtn.style.backgroundColor = '#fffbeb'; }
+        if(status === 'Offline') { activeBtn.style.borderColor = '#ef4444'; activeBtn.style.backgroundColor = '#fef2f2'; }
+    }
+}
+
+async function setRiderStatus(status) {
+    const sessionStr = localStorage.getItem('riderSession');
+    if (!sessionStr) return;
+    const rider = JSON.parse(sessionStr);
+
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/riders/${rider.Ridr_ID}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        });
+
+        if (res.ok) {
+            rider.Ridr_Status = status;
+            localStorage.setItem('riderSession', JSON.stringify(rider));
+            updateStatusUI(status);
+            showNotification('Status updated!');
+        } else {
+            showNotification('Error updating status', true);
+        }
+    } catch (err) {
+        console.error(err);
+        showNotification('Connection error', true);
+    }
+}
+
+
+
 function logoutRider() {
     localStorage.removeItem('riderSession');
     window.location.href = 'rider-login.html';
+}
+
+function openRiderProfile() {
+    const sessionStr = localStorage.getItem('riderSession');
+    if (sessionStr) {
+        const rider = JSON.parse(sessionStr);
+        document.getElementById('profile-name').textContent = `${rider.Ridr_FName} ${rider.Ridr_LName}`;
+        document.getElementById('profile-phone').textContent = rider.Ridr_Phone;
+        document.getElementById('profile-vehicle').textContent = rider.Ridr_Vehicle;
+        document.getElementById('rider-profile-modal').style.display = 'flex';
+    }
+}
+
+function closeRiderProfile() {
+    document.getElementById('rider-profile-modal').style.display = 'none';
 }
 
 function switchTab(tab) {
@@ -81,17 +143,19 @@ async function fetchRiderDeliveries(riderId) {
             div.style.textAlign = 'left';
 
             div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
-                    <span style="background: #ffc107; color: #000; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">Out for Delivery</span>
+                <div class="menu-item-body">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-family: 'Poppins', sans-serif; font-size: 1.1rem; color: var(--dark);">Order #${order.Ordr_ID}</h3>
+                        <span style="background: #ffc107; color: #000; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Out for Delivery</span>
+                    </div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Phone:</strong> ${order.Cust_Phone}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Address:</strong> ${order.Cust_Addr}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Branch:</strong> ${order.Brch_Name}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Payment:</strong> ${order.Pay_Method || 'N/A'} &mdash; ${order.Pay_Status || 'N/A'}</div>
+                    <div style="margin: 1rem 0 0.5rem; font-weight: 800; color: var(--red); font-size: 1.25rem; text-align: left;">Collect: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</div>
+                    <button onclick="markAsDelivered(${order.Ordr_ID})" class="primary-btn" style="padding: 0.6rem; background-color: #28a745; width: 100%; font-size: 1rem; margin-top: 1rem;">Mark as Delivered</button>
                 </div>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Phone:</strong> ${order.Cust_Phone}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${order.Cust_Addr}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Branch:</strong> ${order.Brch_Name}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Payment:</strong> ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
-                <p class="price" style="margin: 0.5rem 0; font-size: 1.25rem;">Collect: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
-                <button onclick="markAsDelivered(${order.Ordr_ID})" class="primary-btn" style="padding: 0.6rem; background-color: #28a745; width: 100%; font-size: 1rem; margin-top: 0.5rem;">Mark as Delivered</button>
             `;
             container.appendChild(div);
         });
@@ -142,14 +206,16 @@ async function fetchRiderHistory(riderId) {
             div.style.textAlign = 'left';
 
             div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
-                    <span style="background: #28a745; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">Delivered</span>
+                <div class="menu-item-body">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-family: 'Poppins', sans-serif; font-size: 1.1rem; color: var(--dark);">Order #${order.Ordr_ID}</h3>
+                        <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Delivered</span>
+                    </div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Address:</strong> ${order.Cust_Addr}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Date:</strong> ${date}</div>
+                    <div style="margin: 1rem 0 0.5rem; font-weight: 800; color: var(--red); font-size: 1.25rem; text-align: left;">₱${parseFloat(order.Ordr_Total).toFixed(2)}</div>
                 </div>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Customer:</strong> ${order.Cust_FName} ${order.Cust_LName}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Address:</strong> ${order.Cust_Addr}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">📅 ${date}</p>
-                <p class="price" style="margin: 0.5rem 0; font-size: 1.1rem;">₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
             `;
             container.appendChild(div);
         });

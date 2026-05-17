@@ -76,24 +76,26 @@ async function fetchCustomerOrders(customerId) {
             const date = new Date(order.Ordr_Date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const statusColor = order.Ordr_Status === 'Delivered' ? '#28a745' : (order.Ordr_Status === 'Out for Delivery' ? '#ffc107' : (order.Ordr_Status === 'Canceled' ? '#dc3545' : '#007bff'));
             
-            // Only show Cancel button for Pending or Preparing
-            const canCancel = ['Pending', 'Preparing'].includes(order.Ordr_Status);
+            // Only show Cancel button for Pending orders
+            const canCancel = order.Ordr_Status === 'Pending';
             
             const div = document.createElement('div');
             div.className = 'menu-item';
             div.style.textAlign = 'left';
             div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Order #${order.Ordr_ID}</h3>
-                    <span style="background: ${statusColor}; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">${order.Ordr_Status}</span>
+                <div class="menu-item-body">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-family: 'Poppins', sans-serif; font-size: 1.1rem; color: var(--dark);">Order #${order.Ordr_ID}</h3>
+                        <span style="background: ${statusColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${order.Ordr_Status}</span>
+                    </div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Date:</strong> ${date}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Branch:</strong> ${order.Brch_Name || 'N/A'}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Delivered to:</strong> ${order.Cust_Addr || 'N/A'}</div>
+                    <div style="margin: 0.3rem 0; font-size: 0.95rem; color: var(--gray-600); text-align: left;"><strong>Payment:</strong> ${order.Pay_Method || 'N/A'} &mdash; ${order.Pay_Status || 'N/A'}</div>
+                    <div style="margin: 1rem 0 0.5rem; font-weight: 800; color: var(--red); font-size: 1.25rem; text-align: left;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</div>
+                    
+                    ${canCancel ? `<button onclick="cancelOrder(${order.Ordr_ID})" class="primary-btn" style="padding: 0.6rem; background-color: #dc3545; font-size: 0.9rem; margin-top: 1rem;">Cancel Order</button>` : ''}
                 </div>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">📅 ${date}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;">🏪 Branch: ${order.Brch_Name || 'N/A'}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;">📍 Delivered to: ${order.Cust_Addr || 'N/A'}</p>
-                <p style="margin: 0.25rem 0; font-size: 0.9rem;">💳 ${order.Pay_Method || 'N/A'} — ${order.Pay_Status || 'N/A'}</p>
-                <p style="margin: 0.5rem 0 0.5rem; font-weight: 800; color: var(--kfc-red); font-size: 1.1rem;">Total: ₱${parseFloat(order.Ordr_Total).toFixed(2)}</p>
-                
-                ${canCancel ? `<button onclick="cancelOrder(${order.Ordr_ID})" class="primary-btn" style="padding: 0.4rem; background-color: #dc3545; font-size: 0.85rem;">Cancel Order</button>` : ''}
             `;
             container.appendChild(div);
         });

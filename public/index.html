@@ -3,69 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KFC Online Delivery</title>
+    <title>KFC Delivery — Order Now</title>
+    <meta name="description" content="Order KFC online. Hot, crispy chicken delivered to your door.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-</head>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    </head>
 <body>
+
+    <!-- NAVBAR -->
     <header>
         <div class="logo">KFC Delivery</div>
         <nav>
             <a href="index.html">Home</a>
-            <a href="#" id="cart-link">Cart (<span id="cart-count">0</span>)</a>
-            <a href="login.html" id="auth-link">Login/Register</a>
-            <a href="rider-login.html">Rider Portal</a>
+            <a href="login.html" id="auth-link">Sign In</a>
+            <a href="#" id="cart-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                Cart
+                <span class="cart-badge" id="cart-count">0</span>
+            </a>
         </nav>
     </header>
-    
+
     <main>
+        <!-- HERO SECTION -->
         <section class="hero">
-            <h2>Finger Lickin' Good</h2>
-            <p>Order your favorite meals now and get them delivered hot and fresh!</p>
+            <div class="hero-content">
+                <span class="hero-eyebrow">Now Delivering Near You</span>
+                <h1>Finger Lickin' <span>Good.</span></h1>
+                <p>Hot, crispy, and made fresh — delivered straight to your door. Pick your branch and start ordering.</p>
+                <div class="hero-actions">
+                    <a href="#menu" class="btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                        Order Now
+                    </a>
+                    <a href="login.html" class="btn-secondary">
+                        Sign In / Register
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-number">30<span style="font-size:1rem">min</span></div>
+                        <div class="stat-label">Avg. Delivery</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">15+</div>
+                        <div class="stat-label">Menu Items</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">Branches</div>
+                    </div>
+                </div>
+            </div>
         </section>
 
-        <section class="menu-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--kfc-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
-                <h2 style="border: none; margin: 0; padding: 0;">Available Menu Items</h2>
-                <input type="text" id="search-input" placeholder="Search menu..." style="padding: 0.6rem; border-radius: 6px; border: 1px solid #ccc; width: 100%; max-width: 300px; font-family: inherit; font-size: 1rem;">
-            </div>
-            
-            <div id="category-filters" style="margin-bottom: 2rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <!-- Category buttons injected by JS -->
+        <!-- MENU SECTION -->
+        <section class="menu-section" id="menu">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Our Menu</h2>
+                    <p class="section-subtitle">Select a branch to see what's available near you</p>
+                </div>
             </div>
 
+            <!-- Controls Bar -->
+            <div class="menu-controls-bar">
+                <div class="branch-select-wrapper">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <label for="main-branch-select">Branch:</label>
+                    <select id="main-branch-select">
+                        <option value="" disabled selected>Select a branch</option>
+                    </select>
+                </div>
+                <div class="controls-divider"></div>
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="search-input" placeholder="Search menu...">
+                </div>
+            </div>
+
+            <!-- Category Filters -->
+            <div id="category-filters"></div>
+
+            <!-- Menu Grid -->
             <div id="menu-container" class="menu-grid">
-                <!-- Menu items will be injected here by JavaScript -->
-                <p>Loading menu...</p>
+                <p style="grid-column: 1/-1; text-align:center; padding: 4rem 0; color: var(--gray-400); font-size: 0.95rem;">
+                    Select a branch above to view the available menu.
+                </p>
             </div>
         </section>
     </main>
 
-    <!-- Cart Modal -->
-    <div id="cart-modal" class="modal" style="display: none;">
+    <!-- CART MODAL -->
+    <div id="cart-modal" class="modal" style="display:none;">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Your Cart</h2>
-            <div id="cart-items"></div>
-            <div class="payment-method-container" style="margin-top: 1rem; margin-bottom: 0.5rem;">
-                <label for="branch-select"><strong>Select Branch:</strong></label>
-                <select id="branch-select" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem;">
-                    <option value="">Loading branches...</option>
-                </select>
+            <div class="modal-header">
+                <h2>Your Cart</h2>
+                <button class="close-btn">&times;</button>
             </div>
-            <div class="payment-method-container" style="margin-bottom: 0.5rem;">
-                <label for="checkout-address"><strong>Delivery Address:</strong></label>
-                <textarea id="checkout-address" placeholder="Enter full delivery address" required style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem; font-family: inherit; border: 1px solid #ccc;"></textarea>
+            <div class="modal-body">
+                <div id="cart-items"></div>
+
+                <div class="cart-total">
+                    <span class="cart-total-label">Order Total</span>
+                    <span class="cart-total-amount">₱<span id="cart-total-price">0.00</span></span>
+                </div>
+
+                <div class="payment-method-container">
+                    <label for="checkout-address">Delivery Address</label>
+                    <textarea id="checkout-address" placeholder="Enter your full delivery address" rows="2" required></textarea>
+                </div>
+                <div class="payment-method-container">
+                    <label for="payment-method">Payment Method</label>
+                    <select id="payment-method">
+                        <option value="Cash">Cash on Delivery</option>
+                        <option value="GCash">GCash</option>
+                    </select>
+                </div>
+                <button id="checkout-btn" class="primary-btn">Place Order</button>
             </div>
-            <div class="payment-method-container" style="margin-bottom: 0.5rem;">
-                <label for="payment-method"><strong>Payment Method:</strong></label>
-                <select id="payment-method" style="padding: 0.5rem; margin-left: 0.5rem; border-radius: 4px; width: 100%; margin-top: 0.25rem;">
-                    <option value="Cash">Cash on Delivery</option>
-                    <option value="GCash">GCash</option>
-                </select>
-            </div>
-            <div class="cart-total">Total: ₱<span id="cart-total-price">0.00</span></div>
-            <button id="checkout-btn" class="primary-btn">Checkout</button>
         </div>
     </div>
 

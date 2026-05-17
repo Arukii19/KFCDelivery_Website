@@ -28,10 +28,23 @@ CREATE TABLE DeliveryRider (
     Ridr_ID INT AUTO_INCREMENT PRIMARY KEY,
     Ridr_FName VARCHAR(50) NOT NULL,
     Ridr_LName VARCHAR(50) NOT NULL,
+    Ridr_Email VARCHAR(100) UNIQUE NOT NULL,
     Ridr_Phone VARCHAR(20) UNIQUE NOT NULL,
     Ridr_Pass VARCHAR(255) NOT NULL,
     Ridr_Vehicle VARCHAR(50) NOT NULL,
     Ridr_Status ENUM('Available', 'Busy', 'Offline') DEFAULT 'Available'
+);
+
+-- 4.5 Create Employee Table
+CREATE TABLE Employee (
+    Emp_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Emp_FName VARCHAR(50) NOT NULL,
+    Emp_LName VARCHAR(50) NOT NULL,
+    Emp_Phone VARCHAR(20) UNIQUE NOT NULL,
+    Emp_Pass VARCHAR(255) NOT NULL,
+    Role ENUM('SuperAdmin', 'BranchAdmin', 'Staff') NOT NULL,
+    Brch_ID INT,
+    FOREIGN KEY (Brch_ID) REFERENCES Branch(Brch_ID)
 );
 
 -- 5. Create Order Table
@@ -42,7 +55,8 @@ CREATE TABLE `Order` (
     Ridr_ID INT,
     Ordr_Date DATETIME DEFAULT CURRENT_TIMESTAMP,
     Ordr_Total DECIMAL(10, 2) NOT NULL,
-    Ordr_Status ENUM('Pending', 'Preparing', 'Out for Delivery', 'Delivered', 'Canceled') DEFAULT 'Preparing',
+    Ordr_Status ENUM('Pending', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Delivered', 'Canceled') DEFAULT 'Preparing',
+    Delivery_Addr TEXT,
     FOREIGN KEY (Cust_ID) REFERENCES Customer(Cust_ID),
     FOREIGN KEY (Brch_ID) REFERENCES Branch(Brch_ID),
     FOREIGN KEY (Ridr_ID) REFERENCES DeliveryRider(Ridr_ID)
@@ -53,8 +67,17 @@ CREATE TABLE MenuItem (
     Menu_ID INT AUTO_INCREMENT PRIMARY KEY,
     Menu_Name VARCHAR(100) NOT NULL,
     Menu_Category VARCHAR(50) NOT NULL,
-    Menu_Price DECIMAL(10, 2) NOT NULL,
-    Menu_Avail BOOLEAN DEFAULT TRUE
+    Menu_Price DECIMAL(10, 2) NOT NULL
+);
+
+-- 6.5 Create BranchMenu Table
+CREATE TABLE BranchMenu (
+    Brch_ID INT NOT NULL,
+    Menu_ID INT NOT NULL,
+    IsAvailable BOOLEAN DEFAULT TRUE,
+    PRIMARY KEY (Brch_ID, Menu_ID),
+    FOREIGN KEY (Brch_ID) REFERENCES Branch(Brch_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Menu_ID) REFERENCES MenuItem(Menu_ID) ON DELETE CASCADE
 );
 
 -- 7. Create OrderItem Table

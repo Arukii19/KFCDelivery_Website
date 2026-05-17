@@ -24,31 +24,31 @@
             transition: all 0.2s;
         }
         .tab-btn.active {
-            background-color: var(--kfc-red);
+            background-color: var(--red);
             color: white;
+            box-shadow: var(--shadow-sm);
         }
     </style>
-</head>
+
+    </head>
 <body>
     <header>
         <div class="logo">Driver Dashboard</div>
-        <nav>
-            <span id="rider-greeting" style="font-weight: 600; margin-right: 1rem;">Welcome!</span>
-            <button onclick="logoutRider()" class="primary-btn" style="background-color: #333; padding: 0.5rem 1rem;">Log Out</button>
+        <nav style="display: flex; gap: 1rem; align-items: center;">
+            <span id="rider-greeting" style="font-weight: 600;">Welcome!</span>
+            <button onclick="openRiderProfile()" class="primary-btn" style="background-color: var(--gray-800); padding: 0.5rem 1rem;">My Profile</button>
+            <button onclick="logoutRider()" class="primary-btn" id="auth-link" style="padding: 0.5rem 1rem;">Log Out</button>
         </nav>
     </header>
 
     <main class="admin-container">
         <!-- Status Control -->
         <div class="auth-box" style="margin-bottom: 2rem; max-width: 500px; padding: 1.5rem;">
-            <h3 style="margin-top: 0;">My Status</h3>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <select id="my-status" style="flex: 1; padding: 0.8rem; border-radius: 6px; border: 1px solid #ccc; font-family: inherit;">
-                    <option value="Available">🟢 Available</option>
-                    <option value="Busy">🟡 Busy</option>
-                    <option value="Offline">🔴 Offline</option>
-                </select>
-                <button onclick="updateMyStatus()" class="primary-btn" style="padding: 0.8rem 1.5rem;">Update</button>
+            <h3 style="margin-top: 0; margin-bottom: 1rem;">My Status</h3>
+            <div style="display: flex; gap: 0.5rem; justify-content: space-between;">
+                <button onclick="setRiderStatus('Available')" id="status-Available" class="status-btn" style="flex: 1; padding: 0.8rem 0.5rem; border: 2px solid #ccc; border-radius: var(--radius-sm); background: white; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--dark);">🟢 Available</button>
+                <button onclick="setRiderStatus('Busy')" id="status-Busy" class="status-btn" style="flex: 1; padding: 0.8rem 0.5rem; border: 2px solid #ccc; border-radius: var(--radius-sm); background: white; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--dark);">🟡 Busy</button>
+                <button onclick="setRiderStatus('Offline')" id="status-Offline" class="status-btn" style="flex: 1; padding: 0.8rem 0.5rem; border: 2px solid #ccc; border-radius: var(--radius-sm); background: white; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--dark);">🔴 Offline</button>
             </div>
         </div>
 
@@ -71,6 +71,28 @@
                 <p style="text-align: center; color: #666; grid-column: 1 / -1;">Loading history...</p>
             </div>
         </section>
+
+        <!-- Rider Profile Modal -->
+        <div id="rider-profile-modal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 450px; padding: 2rem;">
+                <span class="close-btn" onclick="closeRiderProfile()">&times;</span>
+                <h2 style="color: var(--dark); margin-top: 0; margin-bottom: 1.5rem;">My Profile</h2>
+                            <div style="background: var(--gray-50); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--gray-200);">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="color: var(--gray-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Full Name</label>
+                        <p id="profile-name" style="margin: 0.2rem 0 0; font-size: 1.1rem; font-weight: 700; color: var(--dark);"></p>
+                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                        <label style="color: var(--gray-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Phone Number</label>
+                        <p id="profile-phone" style="margin: 0.2rem 0 0; font-size: 1.1rem; font-weight: 600; color: var(--dark);"></p>
+                    </div>
+                                    <div>
+                        <label style="color: var(--gray-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Registered Vehicle</label>
+                        <p id="profile-vehicle" style="margin: 0.2rem 0 0; font-size: 1.1rem; font-weight: 600; color: var(--dark);"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="utils.js"></script>

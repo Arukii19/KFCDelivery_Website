@@ -5,31 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - KFC Delivery</title>
     <link rel="stylesheet" href="style.css">
-</head>
+
+    </head>
 <body>
     <header>
         <div class="logo">KFC Admin Panel</div>
-        <nav>
+        <nav style="display: flex; gap: 1rem; align-items: center;">
             <a href="index.html">Back to Website</a>
+            <a href="#" onclick="logoutAdmin(event)" id="auth-link">Logout</a>
         </nav>
     </header>
 
     <main class="admin-container">
-        
-        <!-- Admin Login Form -->
-        <div class="auth-box" id="admin-login-box">
-            <h2>Admin Login</h2>
-            <form id="admin-login-form">
-                <input type="email" id="admin-email" placeholder="Admin Email" required>
-                <input type="password" id="admin-password" placeholder="Password" required>
-                <button type="submit" class="primary-btn">Login to Dashboard</button>
-            </form>
-        </div>
-
-        <!-- Hidden CRUD Panel -->
-        <div id="admin-crud-panel" style="display: none; width: 100%;">
+            <!-- Admin CRUD Panel -->
+        <h2 id="branch-display-header" style="text-align: center; color: var(--red); margin-top: 1rem; margin-bottom: 2rem;"></h2>
+        <div id="admin-crud-panel" style="display: block; width: 100%;">
             <section class="add-menu-section" style="display: flex; justify-content: center; margin-bottom: 3rem;">
-                <form id="add-menu-form" class="auth-box">
+                <form id="add-menu-form" class="auth-box" enctype="multipart/form-data">
                     <h2>Add New Menu Item</h2>
                     <input type="text" id="menu-name" placeholder="Item Name (e.g., Zinger)" required>
                     <select id="menu-category" required>
@@ -42,7 +34,9 @@
                         <option value="Desserts">Desserts</option>
                     </select>
                     <input type="number" id="menu-price" placeholder="Price (₱)" step="0.01" required>
-                    <select id="menu-avail">
+                    <label for="menu-image" style="font-size: 0.9rem; font-weight: 600; color: var(--gray-600); margin-bottom: 0.25rem; display: block; text-align: left;">Menu Image (Optional):</label>
+                    <input type="file" id="menu-image" accept="image/*">
+                    <select id="menu-avail" style="margin-top: 0.85rem;">
                         <option value="1">Available</option>
                         <option value="0">Out of Stock</option>
                     </select>
@@ -118,10 +112,23 @@
         <div id="order-details-modal" class="modal" style="display: none;">
             <div class="modal-content" style="max-width: 550px;">
                 <span class="close-btn" onclick="closeOrderModal()">&times;</span>
-                <h2 id="order-modal-title" style="color: var(--kfc-red); margin-top: 0;">Order #</h2>
+                <h2 id="order-modal-title" style="color: var(--red); margin-top: 0;">Order #</h2>
                 <div id="order-modal-body">
                     <!-- Order items will be loaded here -->
                 </div>
+            </div>
+        </div>
+        <!-- Edit Price Modal -->
+        <div id="edit-price-modal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 400px; padding: 2rem;">
+                <span class="close-btn" onclick="closeEditPriceModal()">&times;</span>
+                <h2 style="color: var(--dark); margin-top: 0; margin-bottom: 1rem;">Edit Price</h2>
+                <input type="hidden" id="edit-price-id">
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--gray-600); font-size: 0.9rem;">New Price (₱)</label>
+                    <input type="number" id="edit-price-input" style="width: 100%; padding: 0.75rem; border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm); font-family: 'Inter', sans-serif; font-size: 1rem; box-sizing: border-box;" step="0.01">
+                </div>
+                <button onclick="saveNewPrice()" class="primary-btn">Save Price</button>
             </div>
         </div>
     </main>

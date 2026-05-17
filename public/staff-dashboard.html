@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KFC Staff Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    </head>
+<body>
+    <header>
+        <div class="logo">KFC Kitchen Display</div>
+        <nav style="display: flex; gap: 1rem; align-items: center;">
+            <span id="staffNameDisplay" style="font-weight: 600; font-size: 0.9rem;">Loading...</span>
+            <span id="branchNameDisplay" class="menu-item-badge" style="margin: 0;"></span>
+            <button class="primary-btn" onclick="logout()" style="padding: 0.4rem 1rem; background-color: var(--dark);">Logout</button>
+        </nav>
+    </header>
+
+    <main>
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Live Kitchen Queue</h2>
+                <p class="section-subtitle">Real-time orders to prepare</p>
+            </div>
+        </div>
+
+        <div class="menu-grid" id="ordersQueue">
+            <!-- Orders will be injected here -->
+        </div>
+    </main>
+
+    <script src="staff-dashboard.js"></script>
+</body>
+</html>
